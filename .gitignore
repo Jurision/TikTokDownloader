@@ -6,3 +6,4 @@ __pycache__/
 /.run/
 /Volume/
 !/.github/
+/automation/douyin_favorites_sync.local.json
