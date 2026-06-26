@@ -1,0 +1,13 @@
+{
+  "output_root": "%USERPROFILE%\\Downloads\\DouyinFavorites",
+  "folder_name": "DouyinFavorites",
+  "owner_url": "",
+  "browser": "Chrome",
+  "run_command": "3 9 Q",
+  "task_name": "DouyinFavoritesWeeklySync",
+  "day_of_week": "Sunday",
+  "at": "03:30",
+  "skip_cookie_refresh": false,
+  "allow_missing_owner": false,
+  "allow_missing_cookie": false
+}
