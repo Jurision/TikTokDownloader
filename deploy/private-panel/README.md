@@ -28,8 +28,8 @@ Do not publish a host port for this service. 浏览器访问应只通过 Caddy �
    ```
 
 3. 在 `.env` 中填写一个足够长的随机 `DOUK_PRIVATE_TOKEN`。
-4. 如果 navi 里可能存在多个可登录用户，填写 `DOUK_ALLOWED_NAVI_USER_IDS` 或 `DOUK_ALLOWED_NAVI_USER_EMAILS`，用英文逗号分隔。留空表示信任这条 navi 路由已经是 owner-only。
-5. 可选：填写 `DOUK_TRUSTED_PROXY_SECRET`，并在 Caddy 进程里设置同名环境变量。启用后，面板只接受带有匹配 `X-Douk-Trusted-Proxy` 内部头的 navi 身份请求。
+4. 填写 `DOUK_TRUSTED_PROXY_SECRET`，并在 Caddy 进程里设置同名环境变量。面板只接受带有匹配 `X-Douk-Trusted-Proxy` 内部头的 navi 身份请求。
+5. 如果 navi 里可能存在多个可登录用户，填写 `DOUK_ALLOWED_NAVI_USER_IDS` 或 `DOUK_ALLOWED_NAVI_USER_EMAILS`，用英文逗号分隔。留空表示信任这条 navi 路由已经是 owner-only。
 6. 确认持久卷中的 `/app/Volume/settings.json` 已配置下载所需 Cookie。没有 Cookie 时，提交任务会入队，但下载会失败。
 
 ## 预检
@@ -58,29 +58,28 @@ docker compose -f deploy/private-panel/docker-compose.yml ps
 
 ## Caddy 路由形状
 
-把 `/downloads` 和 `/downloads/*` 加入 navi-gated matcher。先移除外部请求伪造的身份头，再走 `forward_auth`，最后代理到内部服务：
+把 `/downloads` 和 `/downloads/*` 加入 navi-gated matcher。必须使用 `route` 保持执行顺序：先移除外部请求伪造的身份头，再走 `forward_auth`，最后代理到内部服务：
 
 ```caddy
 @downloads_gated {
     path /downloads /downloads/*
 }
 
-request_header @downloads_gated -X-Tradedocs-User-Id
-request_header @downloads_gated -X-Tradedocs-User-Email
-request_header @downloads_gated -X-Tradedocs-User-Name
+route @downloads_gated {
+    request_header -X-Tradedocs-User-Id
+    request_header -X-Tradedocs-User-Email
+    request_header -X-Tradedocs-User-Name
+    request_header -X-Douk-Trusted-Proxy
 
-forward_auth @downloads_gated navi-save:8099 {
-    uri /navi/verify
-    copy_headers X-Tradedocs-User-Id X-Tradedocs-User-Email X-Tradedocs-User-Name
-}
+    forward_auth @downloads_gated navi-save:8099 {
+        uri /navi/verify
+        copy_headers X-Tradedocs-User-Id X-Tradedocs-User-Email X-Tradedocs-User-Name
+    }
 
-handle /downloads {
-    redir /downloads/ 308
-}
+    redir /downloads /downloads/ 308
 
-handle /downloads/* {
-    reverse_proxy douk-private-panel:5555 {
-        header_up X-Douk-Trusted-Proxy {env.DOUK_TRUSTED_PROXY_SECRET}
+    reverse_proxy /downloads/* douk-private-panel:5555 {
+        header_up X-Douk-Trusted-Proxy "{env.DOUK_TRUSTED_PROXY_SECRET}"
     }
 }
 ```

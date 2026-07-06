@@ -10,7 +10,7 @@ from .auth import require_panel_user
 from .executor import PrivatePanelExecutor
 from .files import list_files, resolve_job_file
 from .jobs import JobStore
-from .models import JobCreate, JobRecord, PanelUser
+from .models import JobCreate, JobKind, JobRecord, PanelUser
 from .worker import worker_loop
 
 
@@ -145,6 +145,8 @@ def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = Tr
         payload: JobCreate,
         user: PanelUser = Depends(require_panel_user),
     ):
+        if payload.kind != JobKind.DOUYIN_SINGLE:
+            raise HTTPException(status_code=400, detail="Unsupported job kind")
         return store.create_job(payload.kind, payload.input_text)
 
     @app.get("/downloads/api/jobs/{job_id}")

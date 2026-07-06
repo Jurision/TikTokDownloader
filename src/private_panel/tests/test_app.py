@@ -11,11 +11,32 @@ from src.private_panel.models import JobKind, JobStatus
 
 
 class PrivatePanelAppTests(unittest.TestCase):
+    def setUp(self):
+        self.proxy_env = patch.dict(
+            "os.environ",
+            {"DOUK_TRUSTED_PROXY_SECRET": "proxy-secret"},
+            clear=False,
+        )
+        self.proxy_env.start()
+
+    def tearDown(self):
+        self.proxy_env.stop()
+
+    @staticmethod
+    def _navi_headers(extra: dict[str, str] | None = None) -> dict[str, str]:
+        headers = {
+            "X-Tradedocs-User-Id": "user-123",
+            "X-Douk-Trusted-Proxy": "proxy-secret",
+        }
+        if extra:
+            headers.update(extra)
+        return headers
+
     @staticmethod
     def _create_job(client: TestClient) -> dict:
         return client.post(
             "/downloads/api/jobs",
-            headers={"X-Tradedocs-User-Id": "user-123"},
+            headers=PrivatePanelAppTests._navi_headers(),
             json={"kind": "douyin_single", "input_text": "https://v.douyin.com/abc/"},
         ).json()
 
@@ -119,10 +140,11 @@ class PrivatePanelAppTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
             client = TestClient(create_panel_app(Path(temp)))
 
-            response = client.post(
-                "/downloads/api/jobs",
-                json={"kind": "douyin_single", "input_text": "https://v.douyin.com/abc/"},
-            )
+            with patch.dict("os.environ", {}, clear=True):
+                response = client.post(
+                    "/downloads/api/jobs",
+                    json={"kind": "douyin_single", "input_text": "https://v.douyin.com/abc/"},
+                )
 
         self.assertEqual(response.status_code, 401)
 
@@ -171,7 +193,7 @@ class PrivatePanelAppTests(unittest.TestCase):
             client = TestClient(create_panel_app(Path(temp)))
             response = client.get(
                 "/downloads/api/jobs",
-                headers={"X-Tradedocs-User-Id": "user-123"},
+                headers=self._navi_headers(),
             )
 
         self.assertEqual(response.status_code, 200)
@@ -182,7 +204,7 @@ class PrivatePanelAppTests(unittest.TestCase):
             client = TestClient(create_panel_app(Path(temp)))
             response = client.get(
                 "/downloads/",
-                headers={"X-Tradedocs-User-Id": "user-123", "X-Tradedocs-User-Name": "Owner"},
+                headers=self._navi_headers({"X-Tradedocs-User-Name": "Owner"}),
             )
 
         self.assertEqual(response.status_code, 200)
@@ -193,6 +215,19 @@ class PrivatePanelAppTests(unittest.TestCase):
         self.assertNotIn('value="douyin_favorites"', response.text)
         self.assertNotIn('value="douyin_account_liked"', response.text)
         self.assertIn('fetch("/downloads/api/jobs"', response.text)
+
+    def test_submit_unsupported_job_kind_returns_400(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            client = TestClient(create_panel_app(Path(temp)))
+
+            response = client.post(
+                "/downloads/api/jobs",
+                headers=self._navi_headers(),
+                json={"kind": "douyin_favorites", "input_text": ""},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {"detail": "Unsupported job kind"})
 
     def test_job_files_endpoint_lists_files_for_completed_job(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
@@ -208,7 +243,7 @@ class PrivatePanelAppTests(unittest.TestCase):
 
             response = client.get(
                 f"/downloads/api/jobs/{created['id']}/files",
-                headers={"X-Tradedocs-User-Id": "user-123"},
+                headers=self._navi_headers(),
             )
 
         self.assertEqual(response.status_code, 200)
@@ -219,14 +254,14 @@ class PrivatePanelAppTests(unittest.TestCase):
             client = TestClient(create_panel_app(Path(temp)), raise_server_exceptions=False)
             created = client.post(
                 "/downloads/api/jobs",
-                headers={"X-Tradedocs-User-Id": "user-123"},
+                headers=self._navi_headers(),
                 json={"kind": "douyin_single", "input_text": "https://v.douyin.com/abc/"},
             ).json()
             client.app.state.job_store.mark_succeeded(created["id"], "../outside", "done")
 
             response = client.get(
                 f"/downloads/api/jobs/{created['id']}/files",
-                headers={"X-Tradedocs-User-Id": "user-123"},
+                headers=self._navi_headers(),
             )
 
         self.assertEqual(response.status_code, 400)
@@ -248,7 +283,7 @@ class PrivatePanelAppTests(unittest.TestCase):
                 responses.append(
                     client.get(
                         f"/downloads/api/jobs/{created['id']}/files",
-                        headers={"X-Tradedocs-User-Id": "user-123"},
+                        headers=self._navi_headers(),
                     )
                 )
 
@@ -260,7 +295,7 @@ class PrivatePanelAppTests(unittest.TestCase):
 
             response = client.get(
                 "/downloads/api/jobs/missing",
-                headers={"X-Tradedocs-User-Id": "user-123"},
+                headers=self._navi_headers(),
             )
 
         self.assertEqual(response.status_code, 404)
@@ -278,7 +313,7 @@ class PrivatePanelAppTests(unittest.TestCase):
 
             response = client.get(
                 f"/downloads/api/jobs/{created['id']}/files/video.mp4",
-                headers={"X-Tradedocs-User-Id": "user-123"},
+                headers=self._navi_headers(),
             )
 
         self.assertEqual(response.status_code, 200)
@@ -297,7 +332,7 @@ class PrivatePanelAppTests(unittest.TestCase):
 
             response = client.get(
                 f"/downloads/api/jobs/{created['id']}/files/..%5Csecret.txt",
-                headers={"X-Tradedocs-User-Id": "user-123"},
+                headers=self._navi_headers(),
             )
 
         self.assertEqual(response.status_code, 400)
@@ -322,7 +357,7 @@ class PrivatePanelAppTests(unittest.TestCase):
                 responses.append(
                     client.get(
                         f"/downloads/api/jobs/{created['id']}/files/{file_path}",
-                        headers={"X-Tradedocs-User-Id": "user-123"},
+                        headers=self._navi_headers(),
                     )
                 )
 
@@ -336,7 +371,7 @@ class PrivatePanelAppTests(unittest.TestCase):
 
             response = client.get(
                 f"/downloads/api/jobs/{created['id']}/files/private_panel/jobs.db",
-                headers={"X-Tradedocs-User-Id": "user-123"},
+                headers=self._navi_headers(),
             )
 
         self.assertEqual(response.status_code, 404)
@@ -354,10 +389,7 @@ class PrivatePanelAppTests(unittest.TestCase):
 
             response = client.get(
                 "/downloads/",
-                headers={
-                    "X-Tradedocs-User-Id": "user-123",
-                    "X-Tradedocs-User-Name": "<Owner & Co>",
-                },
+                headers=self._navi_headers({"X-Tradedocs-User-Name": "<Owner & Co>"}),
             )
 
         self.assertEqual(response.status_code, 200)

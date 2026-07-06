@@ -45,9 +45,11 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
         self.assertIn("/downloads", readme)
         self.assertIn("forward_auth", readme)
         self.assertIn("navi-save:8099", readme)
-        self.assertIn("request_header @downloads_gated -X-Tradedocs-User-Id", readme)
-        self.assertIn("request_header @downloads_gated -X-Tradedocs-User-Email", readme)
-        self.assertIn("request_header @downloads_gated -X-Tradedocs-User-Name", readme)
+        self.assertIn("route @downloads_gated {", readme)
+        self.assertIn("request_header -X-Tradedocs-User-Id", readme)
+        self.assertIn("request_header -X-Tradedocs-User-Email", readme)
+        self.assertIn("request_header -X-Tradedocs-User-Name", readme)
+        self.assertIn("request_header -X-Douk-Trusted-Proxy", readme)
         self.assertIn(
             "copy_headers X-Tradedocs-User-Id X-Tradedocs-User-Email X-Tradedocs-User-Name",
             readme,
@@ -55,13 +57,21 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
         self.assertIn("X-Douk-Trusted-Proxy", readme)
         self.assertIn("DOUK_ALLOWED_NAVI_USER_IDS", readme)
         self.assertIn("DOUK_ALLOWED_NAVI_USER_EMAILS", readme)
-        self.assertIn("redir /downloads/ 308", readme)
-        self.assertIn("reverse_proxy douk-private-panel:5555", readme)
+        self.assertIn("redir /downloads /downloads/ 308", readme)
+        self.assertIn("reverse_proxy /downloads/* douk-private-panel:5555", readme)
         self.assertIn("cp deploy/private-panel/env.example deploy/private-panel/.env", readme)
         self.assertIn("chmod 600 deploy/private-panel/.env", readme)
         self.assertIn("docker compose -f deploy/private-panel/docker-compose.yml config --quiet", readme)
         self.assertIn("docker compose -f deploy/private-panel/docker-compose.yml down", readme)
         self.assertIn("Do not publish a host port", readme)
+        self.assertLess(
+            readme.index("request_header -X-Tradedocs-User-Id"),
+            readme.index("forward_auth @downloads_gated navi-save:8099"),
+        )
+        self.assertLess(
+            readme.index("forward_auth @downloads_gated navi-save:8099"),
+            readme.index("reverse_proxy /downloads/* douk-private-panel:5555"),
+        )
 
     def test_local_env_file_is_ignored_by_git_and_docker_build_context(self):
         gitignore = Path(".gitignore").read_text(encoding="utf-8")

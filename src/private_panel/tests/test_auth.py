@@ -79,22 +79,32 @@ class PrivatePanelAuthTests(unittest.IsolatedAsyncioTestCase):
             self.assertFalse(token_matches("secret"))
 
     async def test_require_panel_user_prefers_navi_identity(self):
-        user = await require_panel_user(
-            authorization="Bearer wrong",
-            x_douk_token="wrong",
-            x_tradedocs_user_id="user-123",
-            x_tradedocs_user_email="owner@example.com",
-            x_tradedocs_user_name="Owner",
-        )
+        with patch.dict(os.environ, {"DOUK_TRUSTED_PROXY_SECRET": "proxy-secret"}, clear=False):
+            user = await require_panel_user(
+                authorization="Bearer wrong",
+                x_douk_token="wrong",
+                x_douk_trusted_proxy="proxy-secret",
+                x_tradedocs_user_id="user-123",
+                x_tradedocs_user_email="owner@example.com",
+                x_tradedocs_user_name="Owner",
+            )
 
         self.assertEqual(user.via, "navi")
         self.assertEqual(user.id, "user-123")
 
     async def test_require_panel_user_accepts_allowed_navi_user_id(self):
-        with patch.dict(os.environ, {"DOUK_ALLOWED_NAVI_USER_IDS": "owner-1, owner-2"}, clear=False):
+        with patch.dict(
+            os.environ,
+            {
+                "DOUK_ALLOWED_NAVI_USER_IDS": "owner-1, owner-2",
+                "DOUK_TRUSTED_PROXY_SECRET": "proxy-secret",
+            },
+            clear=False,
+        ):
             user = await require_panel_user(
                 authorization="",
                 x_douk_token="",
+                x_douk_trusted_proxy="proxy-secret",
                 x_tradedocs_user_id="owner-2",
                 x_tradedocs_user_email="other@example.com",
                 x_tradedocs_user_name="Owner",
@@ -105,12 +115,16 @@ class PrivatePanelAuthTests(unittest.IsolatedAsyncioTestCase):
     async def test_require_panel_user_accepts_allowed_navi_email(self):
         with patch.dict(
             os.environ,
-            {"DOUK_ALLOWED_NAVI_USER_EMAILS": "owner@example.com"},
+            {
+                "DOUK_ALLOWED_NAVI_USER_EMAILS": "owner@example.com",
+                "DOUK_TRUSTED_PROXY_SECRET": "proxy-secret",
+            },
             clear=False,
         ):
             user = await require_panel_user(
                 authorization="",
                 x_douk_token="",
+                x_douk_trusted_proxy="proxy-secret",
                 x_tradedocs_user_id="user-123",
                 x_tradedocs_user_email="OWNER@example.com",
                 x_tradedocs_user_name="Owner",
@@ -119,11 +133,16 @@ class PrivatePanelAuthTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(user.email, "OWNER@example.com")
 
     async def test_require_panel_user_rejects_navi_user_outside_allowlist(self):
-        with patch.dict(os.environ, {"DOUK_ALLOWED_NAVI_USER_IDS": "owner-1"}, clear=False):
+        with patch.dict(
+            os.environ,
+            {"DOUK_ALLOWED_NAVI_USER_IDS": "owner-1", "DOUK_TRUSTED_PROXY_SECRET": "proxy-secret"},
+            clear=False,
+        ):
             with self.assertRaises(HTTPException) as raised:
                 await require_panel_user(
                     authorization="",
                     x_douk_token="",
+                    x_douk_trusted_proxy="proxy-secret",
                     x_tradedocs_user_id="intruder",
                     x_tradedocs_user_email="intruder@example.com",
                     x_tradedocs_user_name="Intruder",
@@ -131,7 +150,21 @@ class PrivatePanelAuthTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(raised.exception.status_code, 403)
 
-    async def test_require_panel_user_requires_trusted_proxy_header_when_configured(self):
+    async def test_require_panel_user_requires_trusted_proxy_secret_for_navi_headers(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaises(HTTPException) as raised:
+                await require_panel_user(
+                    authorization="",
+                    x_douk_token="",
+                    x_douk_trusted_proxy="",
+                    x_tradedocs_user_id="user-123",
+                    x_tradedocs_user_email="owner@example.com",
+                    x_tradedocs_user_name="Owner",
+                )
+
+        self.assertEqual(raised.exception.status_code, 401)
+
+    async def test_require_panel_user_rejects_wrong_trusted_proxy_header(self):
         with patch.dict(os.environ, {"DOUK_TRUSTED_PROXY_SECRET": "proxy-secret"}, clear=False):
             with self.assertRaises(HTTPException) as raised:
                 await require_panel_user(

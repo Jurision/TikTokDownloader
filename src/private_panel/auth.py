@@ -40,7 +40,7 @@ def _env_csv_values(name: str, *, lower: bool = False) -> set[str]:
 def _trusted_proxy_header_matches(header_value: str) -> bool:
     expected = os.environ.get("DOUK_TRUSTED_PROXY_SECRET", "")
     if not expected:
-        return True
+        return False
     if not header_value:
         return False
     return hmac.compare_digest(header_value, expected)
