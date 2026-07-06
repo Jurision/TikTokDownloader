@@ -269,10 +269,35 @@ class PrivatePanelAppTests(unittest.TestCase):
         self.assertIn("Private Download Panel", response.text)
         self.assertIn("Owner", response.text)
         self.assertIn('value="douyin_single"', response.text)
+        self.assertIn('value="douyin_account_posts"', response.text)
+        self.assertIn('value="douyin_account_liked"', response.text)
+        self.assertIn('value="douyin_favorites"', response.text)
+        self.assertIn('value="douyin_mix"', response.text)
         self.assertNotIn('value="auto"', response.text)
-        self.assertNotIn('value="douyin_favorites"', response.text)
-        self.assertNotIn('value="douyin_account_liked"', response.text)
         self.assertIn('fetch("/downloads/api/jobs"', response.text)
+
+    def test_submit_supported_douyin_job_kinds(self):
+        supported = [
+            "douyin_single",
+            "douyin_account_posts",
+            "douyin_account_liked",
+            "douyin_favorites",
+            "douyin_mix",
+        ]
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            client = TestClient(create_panel_app(Path(temp)))
+
+            responses = [
+                client.post(
+                    "/downloads/api/jobs",
+                    headers=self._navi_headers(),
+                    json={"kind": kind, "input_text": "https://www.douyin.com/user/abc"},
+                )
+                for kind in supported
+            ]
+
+        self.assertEqual([response.status_code for response in responses], [200] * len(supported))
+        self.assertEqual([response.json()["kind"] for response in responses], supported)
 
     def test_submit_unsupported_job_kind_returns_400(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
@@ -281,7 +306,7 @@ class PrivatePanelAppTests(unittest.TestCase):
             response = client.post(
                 "/downloads/api/jobs",
                 headers=self._navi_headers(),
-                json={"kind": "douyin_favorites", "input_text": ""},
+                json={"kind": "tiktok_single", "input_text": ""},
             )
 
         self.assertEqual(response.status_code, 400)

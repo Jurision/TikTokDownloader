@@ -34,6 +34,18 @@ Do not publish a host port for this service. 浏览器访问应只通过 Caddy �
 5. 如果 navi 里可能存在多个可登录用户，填写 `DOUK_ALLOWED_NAVI_USER_IDS` 或 `DOUK_ALLOWED_NAVI_USER_EMAILS`，用英文逗号分隔。留空表示信任这条 navi 路由已经是 owner-only。
 6. 确认持久卷中的 `/app/Volume/settings.json` 已配置下载所需 Cookie。没有 Cookie 时，提交任务会入队，但下载会失败。
 
+## 支持的任务类型
+
+面板目前把下列 Douyin 模式接到了原项目核心下载流程：
+
+- `douyin_single`：单条抖音作品链接；输入框粘贴作品链接。
+- `douyin_account_posts`：账号主页发布作品；输入框粘贴博主主页链接，底层等价于配置 `accounts_urls` 且 `tab=post`。
+- `douyin_account_liked`：账号喜欢作品；输入框可粘贴账号主页链接，底层等价于配置 `accounts_urls` 且 `tab=favorite`。如果输入框留空，会尝试使用 `/app/Volume/settings.json` 里的 `owner_url.url` 作为当前登录账号主页。
+- `douyin_favorites`：当前登录账号收藏作品；不需要在输入框填链接，但 `/app/Volume/settings.json` 必须配置 `owner_url.url`，且 Cookie 必须属于该账号。
+- `douyin_mix`：单个合集或合集内作品链接；输入框粘贴合集链接或属于该合集的作品链接，底层等价于配置 `mix_urls`。
+
+收藏、喜欢、私密账号或不可公开访问的数据都依赖有效 Cookie；Cookie 过期时任务会失败，需要更新持久卷里的 `settings.json` 后重试。
+
 ## 预检
 
 部署前先验证 Compose 配置：
@@ -93,8 +105,9 @@ route @downloads_gated {
 1. 未登录 navi 时打开 `/downloads/`，应跳转到 `/navi/login`。
 2. 登录 navi 后打开 `/downloads/`，应能看到私有下载面板。
 3. 检查 `/downloads/api/health`。公网 `/downloads` 路由必须配置 `DOUK_TRUSTED_PROXY_SECRET` 才会健康；如果 worker 已退出或 proxy secret 未配置，health 会返回非 200。`DOUK_PRIVATE_TOKEN` 只用于内部直连，不代表 navi 路由已就绪。
-4. 用单条抖音链接提交一个小任务，确认任务状态从 `queued` 进入执行并生成文件。
-5. 文件只应从 `/downloads/api/jobs/{job_id}/files/...` 下载，服务本身不应暴露公网端口。
+4. 先用 `douyin_single` 提交一个小任务，确认任务状态从 `queued` 进入执行并生成文件。
+5. 再用 `douyin_account_posts`、`douyin_account_liked`、`douyin_favorites` 或 `douyin_mix` 跑一个小范围任务，确认 Cookie、`owner_url.url`、`accounts_urls`/`mix_urls` 对应能力在 VPS 环境可用。
+6. 文件只应从 `/downloads/api/jobs/{job_id}/files/...` 下载，服务本身不应暴露公网端口。
 
 ## 回滚
 

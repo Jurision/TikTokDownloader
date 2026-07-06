@@ -75,6 +75,18 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
             readme.index("reverse_proxy /downloads/* douk-private-panel:5555"),
         )
 
+    def test_readme_documents_supported_douyin_job_modes(self):
+        readme = Path("deploy/private-panel/README.md").read_text(encoding="utf-8")
+
+        self.assertIn("douyin_single", readme)
+        self.assertIn("douyin_account_posts", readme)
+        self.assertIn("douyin_account_liked", readme)
+        self.assertIn("douyin_favorites", readme)
+        self.assertIn("douyin_mix", readme)
+        self.assertIn("owner_url.url", readme)
+        self.assertIn("accounts_urls", readme)
+        self.assertIn("mix_urls", readme)
+
     def test_local_env_file_is_ignored_by_git_and_docker_build_context(self):
         gitignore = Path(".gitignore").read_text(encoding="utf-8")
         dockerignore = Path(".dockerignore").read_text(encoding="utf-8")

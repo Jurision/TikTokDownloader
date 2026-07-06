@@ -16,6 +16,14 @@ from .worker import worker_loop
 
 INTERRUPTED_JOB_ERROR = "Worker restarted before completion"
 MAX_HEALTHY_WORKER_ERRORS = 0
+SUPPORTED_JOB_OPTIONS = (
+    (JobKind.DOUYIN_SINGLE, "Douyin single work link"),
+    (JobKind.DOUYIN_ACCOUNT_POSTS, "Douyin account posts"),
+    (JobKind.DOUYIN_ACCOUNT_LIKED, "Douyin account liked works"),
+    (JobKind.DOUYIN_FAVORITES, "My Douyin favorites"),
+    (JobKind.DOUYIN_MIX, "Douyin mix or collection link"),
+)
+SUPPORTED_JOB_KINDS = {kind for kind, _label in SUPPORTED_JOB_OPTIONS}
 
 
 def _job_store(volume_root: Path) -> JobStore:
@@ -27,6 +35,10 @@ def _panel_html(user: PanelUser, jobs: list[JobRecord]) -> str:
         f"<tr><td>{html.escape(job.id)}</td><td>{html.escape(job.kind.value)}</td>"
         f"<td>{html.escape(job.status.value)}</td><td>{html.escape(job.log_tail)}</td></tr>"
         for job in jobs
+    )
+    options = "\n".join(
+        f'      <option value="{html.escape(kind.value)}">{html.escape(label)}</option>'
+        for kind, label in SUPPORTED_JOB_OPTIONS
     )
     return f"""
 <!doctype html>
@@ -52,7 +64,7 @@ def _panel_html(user: PanelUser, jobs: list[JobRecord]) -> str:
   <form id="job-form">
     <label for="kind">Source type</label>
     <select id="kind" name="kind">
-      <option value="douyin_single">Douyin single work link</option>
+{options}
     </select>
     <p><label for="input_text">Links or task input</label></p>
     <textarea id="input_text" name="input_text"></textarea>
@@ -202,7 +214,7 @@ def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = Tr
         payload: JobCreate,
         user: PanelUser = Depends(require_panel_user),
     ):
-        if payload.kind != JobKind.DOUYIN_SINGLE:
+        if payload.kind not in SUPPORTED_JOB_KINDS:
             raise HTTPException(status_code=400, detail="Unsupported job kind")
         return store.create_job(payload.kind, payload.input_text)
 
