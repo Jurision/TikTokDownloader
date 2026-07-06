@@ -9,6 +9,8 @@ Do not publish a host port for this service. 浏览器访问应只通过 Caddy �
 - `docker-compose.yml`：构建并运行内部面板服务，不声明 `ports`。
 - `env.example`：复制为 `.env` 后填写 `DOUK_PRIVATE_TOKEN`，用于脚本或 API 直接调用。
 
+`DOUK_PRIVATE_TOKEN` 只适合内部直连服务，或以后另建一条明确的私有 API 路由。这个文档里的公网 `/downloads` 路由仍然只走 navi 门禁。
+
 ## 启动前准备
 
 这些命令需要在完整仓库 checkout 的根目录运行，因为 `docker-compose.yml` 使用 `../..` 作为构建上下文。不要只复制 `deploy/private-panel` 目录到服务器单独运行。
@@ -88,8 +90,9 @@ route @downloads_gated {
 
 1. 未登录 navi 时打开 `/downloads/`，应跳转到 `/navi/login`。
 2. 登录 navi 后打开 `/downloads/`，应能看到私有下载面板。
-3. 用单条抖音链接提交一个小任务，确认任务状态从 `queued` 进入执行并生成文件。
-4. 文件只应从 `/downloads/api/jobs/{job_id}/files/...` 下载，服务本身不应暴露公网端口。
+3. 检查 `/downloads/api/health`。如果 worker 已退出、`DOUK_TRUSTED_PROXY_SECRET`/`DOUK_PRIVATE_TOKEN` 都未配置，health 会返回非 200。
+4. 用单条抖音链接提交一个小任务，确认任务状态从 `queued` 进入执行并生成文件。
+5. 文件只应从 `/downloads/api/jobs/{job_id}/files/...` 下载，服务本身不应暴露公网端口。
 
 ## 回滚
 

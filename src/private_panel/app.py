@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
 from .auth import require_panel_user
 from .executor import PrivatePanelExecutor
@@ -95,6 +95,30 @@ def _validated_output_dir(job: JobRecord) -> str:
     return job.output_dir
 
 
+def _auth_health() -> dict[str, bool]:
+    import os
+
+    return {
+        "trusted_proxy": bool(os.environ.get("DOUK_TRUSTED_PROXY_SECRET")),
+        "token": bool(os.environ.get("DOUK_PRIVATE_TOKEN")),
+    }
+
+
+def _worker_state(app: FastAPI, start_worker: bool) -> str:
+    if not start_worker:
+        return "disabled"
+    task = getattr(app.state, "worker_task", None)
+    if task is None:
+        return "missing"
+    if task.cancelled():
+        return "cancelled"
+    if task.done():
+        if task.exception():
+            return "failed"
+        return "stopped"
+    return "running"
+
+
 def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = True) -> FastAPI:
     root = Path(volume_root)
     root.mkdir(parents=True, exist_ok=True)
@@ -114,7 +138,7 @@ def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = Tr
             yield
         finally:
             worker_task.cancel()
-            with suppress(asyncio.CancelledError):
+            with suppress(asyncio.CancelledError, Exception):
                 await worker_task
 
     app = FastAPI(
@@ -130,7 +154,19 @@ def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = Tr
 
     @app.get("/downloads/api/health")
     async def health():
-        return {"ok": True, "service": "private-download-panel"}
+        await asyncio.sleep(0)
+        auth = _auth_health()
+        worker = _worker_state(app, start_worker)
+        ok = any(auth.values()) and worker not in {"missing", "cancelled", "failed", "stopped"}
+        return JSONResponse(
+            {
+                "ok": ok,
+                "service": "private-download-panel",
+                "worker": worker,
+                "auth": auth,
+            },
+            status_code=200 if ok else 503,
+        )
 
     @app.get("/downloads/", response_class=HTMLResponse)
     async def index(user: PanelUser = Depends(require_panel_user)):

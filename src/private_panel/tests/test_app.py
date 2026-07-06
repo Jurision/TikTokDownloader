@@ -46,12 +46,43 @@ class PrivatePanelAppTests(unittest.TestCase):
 
     def test_health_endpoint_is_public_and_minimal(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
-            client = TestClient(create_panel_app(Path(temp)))
-
-            response = client.get("/downloads/api/health")
+            with TestClient(create_panel_app(Path(temp))) as client:
+                response = client.get("/downloads/api/health")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {"ok": True, "service": "private-download-panel"})
+        self.assertEqual(
+            response.json(),
+            {
+                "ok": True,
+                "service": "private-download-panel",
+                "worker": "running",
+                "auth": {"trusted_proxy": True, "token": False},
+            },
+        )
+
+    def test_health_returns_503_when_worker_task_is_dead(self):
+        async def failing_worker_loop(store, executor):
+            raise RuntimeError("worker crashed")
+
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            with patch("src.private_panel.app.worker_loop", new=failing_worker_loop):
+                app = create_panel_app(Path(temp))
+                with TestClient(app) as client:
+                    response = client.get("/downloads/api/health")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["worker"], "failed")
+
+    def test_health_returns_503_when_no_auth_mode_is_configured(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            app = create_panel_app(Path(temp), start_worker=False)
+            with patch.dict("os.environ", {}, clear=True):
+                with TestClient(app) as client:
+                    response = client.get("/downloads/api/health")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertFalse(response.json()["ok"])
+        self.assertEqual(response.json()["auth"], {"trusted_proxy": False, "token": False})
 
     def test_app_starts_and_stops_background_worker(self):
         worker_calls = []

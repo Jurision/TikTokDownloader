@@ -36,6 +36,10 @@ async def worker_loop(
     poll_seconds: float = 2.0,
 ) -> None:
     while True:
-        processed = await run_one_job(store, executor)
+        try:
+            processed = await run_one_job(store, executor)
+        except Exception:
+            await asyncio.sleep(poll_seconds)
+            continue
         if not processed:
             await asyncio.sleep(poll_seconds)
