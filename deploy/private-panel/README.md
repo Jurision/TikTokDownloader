@@ -28,7 +28,9 @@ Do not publish a host port for this service. 浏览器访问应只通过 Caddy �
    ```
 
 3. 在 `.env` 中填写一个足够长的随机 `DOUK_PRIVATE_TOKEN`。
-4. 确认持久卷中的 `/app/Volume/settings.json` 已配置下载所需 Cookie。没有 Cookie 时，提交任务会入队，但下载会失败。
+4. 如果 navi 里可能存在多个可登录用户，填写 `DOUK_ALLOWED_NAVI_USER_IDS` 或 `DOUK_ALLOWED_NAVI_USER_EMAILS`，用英文逗号分隔。留空表示信任这条 navi 路由已经是 owner-only。
+5. 可选：填写 `DOUK_TRUSTED_PROXY_SECRET`，并在 Caddy 进程里设置同名环境变量。启用后，面板只接受带有匹配 `X-Douk-Trusted-Proxy` 内部头的 navi 身份请求。
+6. 确认持久卷中的 `/app/Volume/settings.json` 已配置下载所需 Cookie。没有 Cookie 时，提交任务会入队，但下载会失败。
 
 ## 预检
 
@@ -77,7 +79,9 @@ handle /downloads {
 }
 
 handle /downloads/* {
-    reverse_proxy douk-private-panel:5555
+    reverse_proxy douk-private-panel:5555 {
+        header_up X-Douk-Trusted-Proxy {env.DOUK_TRUSTED_PROXY_SECRET}
+    }
 }
 ```
 

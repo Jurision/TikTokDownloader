@@ -188,6 +188,10 @@ class PrivatePanelAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Private Download Panel", response.text)
         self.assertIn("Owner", response.text)
+        self.assertIn('value="douyin_single"', response.text)
+        self.assertNotIn('value="auto"', response.text)
+        self.assertNotIn('value="douyin_favorites"', response.text)
+        self.assertNotIn('value="douyin_account_liked"', response.text)
         self.assertIn('fetch("/downloads/api/jobs"', response.text)
 
     def test_job_files_endpoint_lists_files_for_completed_job(self):

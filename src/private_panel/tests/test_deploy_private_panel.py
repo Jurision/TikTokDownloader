@@ -27,10 +27,17 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
 
     def test_env_example_names_private_token_without_secret_value(self):
         env_text = Path("deploy/private-panel/env.example").read_text(encoding="utf-8")
+        env_values = dict(
+            line.split("=", 1)
+            for line in env_text.splitlines()
+            if line and not line.startswith("#")
+        )
 
-        self.assertIn("DOUK_PRIVATE_TOKEN=", env_text)
-        self.assertNotIn("secret", env_text.lower())
-        self.assertIn("DOUK_PANEL_VOLUME=/app/Volume", env_text)
+        self.assertEqual(env_values["DOUK_PRIVATE_TOKEN"], "")
+        self.assertEqual(env_values["DOUK_ALLOWED_NAVI_USER_IDS"], "")
+        self.assertEqual(env_values["DOUK_ALLOWED_NAVI_USER_EMAILS"], "")
+        self.assertEqual(env_values["DOUK_TRUSTED_PROXY_SECRET"], "")
+        self.assertEqual(env_values["DOUK_PANEL_VOLUME"], "/app/Volume")
 
     def test_readme_documents_navi_gated_caddy_route(self):
         readme = Path("deploy/private-panel/README.md").read_text(encoding="utf-8")
@@ -45,6 +52,9 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
             "copy_headers X-Tradedocs-User-Id X-Tradedocs-User-Email X-Tradedocs-User-Name",
             readme,
         )
+        self.assertIn("X-Douk-Trusted-Proxy", readme)
+        self.assertIn("DOUK_ALLOWED_NAVI_USER_IDS", readme)
+        self.assertIn("DOUK_ALLOWED_NAVI_USER_EMAILS", readme)
         self.assertIn("redir /downloads/ 308", readme)
         self.assertIn("reverse_proxy douk-private-panel:5555", readme)
         self.assertIn("cp deploy/private-panel/env.example deploy/private-panel/.env", readme)

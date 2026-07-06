@@ -52,9 +52,6 @@ def _panel_html(user: PanelUser, jobs: list[JobRecord]) -> str:
     <label for="kind">Source type</label>
     <select id="kind" name="kind">
       <option value="douyin_single">Douyin single work link</option>
-      <option value="auto">Auto-detect link</option>
-      <option value="douyin_favorites">My Douyin favorites</option>
-      <option value="douyin_account_liked">Douyin account liked works</option>
     </select>
     <p><label for="input_text">Links or task input</label></p>
     <textarea id="input_text" name="input_text"></textarea>
