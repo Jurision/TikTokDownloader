@@ -1,0 +1,29 @@
+services:
+  douk-private-panel:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: douk-private-panel:latest
+    container_name: douk-private-panel
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DOUK_PANEL_MODE=1
+      - DOUK_PANEL_HOST=0.0.0.0
+      - DOUK_PANEL_PORT=5555
+      - DOUK_PANEL_VOLUME=/app/Volume
+    expose:
+      - "5555"
+    volumes:
+      - douk_private_panel_volume:/app/Volume
+    networks:
+      - halo_network
+
+volumes:
+  douk_private_panel_volume:
+
+networks:
+  halo_network:
+    name: oceverse_halo_network
+    external: true

@@ -1,0 +1,70 @@
+# 私有下载面板部署
+
+这个目录用于把个人 DouK-Downloader 面板作为内部 Docker 服务运行，并接入现有的 navi 门禁和 Caddy 反向代理。
+
+Do not publish a host port for this service. 浏览器访问应只通过 Caddy 的 `/downloads` 路径进入；Caddy 先用 `forward_auth` 通过 `navi-save:8099` 校验已有的 `navi_session`，再把请求转发到内部 Docker 网络里的 `douk-private-panel:5555`。
+
+## 文件
+
+- `docker-compose.yml`：构建并运行内部面板服务，不声明 `ports`。
+- `env.example`：复制为 `.env` 后填写 `DOUK_PRIVATE_TOKEN`，用于脚本或 API 直接调用。
+
+## 启动前准备
+
+1. 确认 Caddy/navi 所在 Docker 网络名为 `oceverse_halo_network`。
+2. 复制环境文件：
+
+   ```powershell
+   Copy-Item deploy/private-panel/env.example deploy/private-panel/.env
+   ```
+
+3. 在 `.env` 中填写一个足够长的随机 `DOUK_PRIVATE_TOKEN`。
+4. 确认持久卷中的 `/app/Volume/settings.json` 已配置下载所需 Cookie。没有 Cookie 时，提交任务会入队，但下载会失败。
+
+## 启动服务
+
+在仓库根目录运行：
+
+```powershell
+docker compose -f deploy/private-panel/docker-compose.yml up -d --build
+```
+
+确认服务没有公开宿主机端口：
+
+```powershell
+docker compose -f deploy/private-panel/docker-compose.yml ps
+```
+
+## Caddy 路由形状
+
+把 `/downloads` 和 `/downloads/*` 加入 navi-gated matcher。先移除外部请求伪造的身份头，再走 `forward_auth`，最后代理到内部服务：
+
+```caddy
+@downloads_gated {
+    path /downloads /downloads/*
+}
+
+request_header @downloads_gated -X-Tradedocs-User-Id
+request_header @downloads_gated -X-Tradedocs-User-Email
+request_header @downloads_gated -X-Tradedocs-User-Name
+
+forward_auth @downloads_gated navi-save:8099 {
+    uri /navi/verify
+    copy_headers X-Tradedocs-User-Id X-Tradedocs-User-Email X-Tradedocs-User-Name
+}
+
+handle /downloads {
+    reverse_proxy douk-private-panel:5555
+}
+
+handle /downloads/* {
+    reverse_proxy douk-private-panel:5555
+}
+```
+
+## 首次验证
+
+1. 未登录 navi 时打开 `/downloads/`，应跳转到 `/navi/login`。
+2. 登录 navi 后打开 `/downloads/`，应能看到私有下载面板。
+3. 用单条抖音链接提交一个小任务，确认任务状态从 `queued` 进入执行并生成文件。
+4. 文件只应从 `/downloads/api/jobs/{job_id}/files/...` 下载，服务本身不应暴露公网端口。
