@@ -1,3 +1,4 @@
+import asyncio
 import tempfile
 import unittest
 from pathlib import Path
@@ -30,6 +31,42 @@ class PrivatePanelAppTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"ok": True, "service": "private-download-panel"})
+
+    def test_app_starts_and_stops_background_worker(self):
+        worker_calls = []
+
+        async def fake_worker_loop(store, executor):
+            worker_calls.append((store, executor))
+            await asyncio.sleep(3600)
+
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            with patch("src.private_panel.app.PrivatePanelExecutor") as executor:
+                with patch("src.private_panel.app.worker_loop", new=fake_worker_loop):
+                    app = create_panel_app(Path(temp))
+
+                    with TestClient(app):
+                        worker_task = app.state.worker_task
+                        self.assertFalse(worker_task.done())
+
+                    self.assertTrue(worker_task.cancelled())
+
+        executor.assert_called_once_with(Path(temp))
+        self.assertEqual(worker_calls, [(app.state.job_store, executor.return_value)])
+
+    def test_app_can_disable_background_worker_for_isolated_tests(self):
+        worker_calls = []
+
+        async def fake_worker_loop(store, executor):
+            worker_calls.append((store, executor))
+
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            with patch("src.private_panel.app.worker_loop", new=fake_worker_loop):
+                app = create_panel_app(Path(temp), start_worker=False)
+
+                with TestClient(app):
+                    self.assertFalse(hasattr(app.state, "worker_task"))
+
+        self.assertEqual(worker_calls, [])
 
     def test_default_docs_and_schema_are_not_public(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:

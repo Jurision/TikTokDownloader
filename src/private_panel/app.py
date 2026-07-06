@@ -1,13 +1,17 @@
+import asyncio
 import html
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse
 
 from .auth import require_panel_user
+from .executor import PrivatePanelExecutor
 from .files import list_files, resolve_job_file
 from .jobs import JobStore
 from .models import JobCreate, JobRecord, PanelUser
+from .worker import worker_loop
 
 
 def _job_store(volume_root: Path) -> JobStore:
@@ -91,17 +95,35 @@ def _validated_output_dir(job: JobRecord) -> str:
     return job.output_dir
 
 
-def create_panel_app(volume_root: Path | str = "Volume") -> FastAPI:
+def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = True) -> FastAPI:
     root = Path(volume_root)
     root.mkdir(parents=True, exist_ok=True)
+    store = _job_store(root)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if not start_worker:
+            yield
+            return
+
+        executor = PrivatePanelExecutor(root)
+        worker_task = asyncio.create_task(worker_loop(store, executor))
+        app.state.worker_task = worker_task
+        try:
+            yield
+        finally:
+            worker_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await worker_task
+
     app = FastAPI(
         title="Private Download Panel",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
         redirect_slashes=False,
+        lifespan=lifespan,
     )
-    store = _job_store(root)
     app.state.job_store = store
     app.state.volume_root = root
 
