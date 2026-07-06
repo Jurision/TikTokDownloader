@@ -34,11 +34,14 @@ async def worker_loop(
     store: JobStore,
     executor: PrivatePanelExecutor,
     poll_seconds: float = 2.0,
+    on_error=None,
 ) -> None:
     while True:
         try:
             processed = await run_one_job(store, executor)
-        except Exception:
+        except Exception as exc:
+            if on_error is not None:
+                on_error(exc)
             await asyncio.sleep(poll_seconds)
             continue
         if not processed:

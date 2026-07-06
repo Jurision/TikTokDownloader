@@ -50,6 +50,8 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
         self.assertIn("request_header -X-Tradedocs-User-Email", readme)
         self.assertIn("request_header -X-Tradedocs-User-Name", readme)
         self.assertIn("request_header -X-Douk-Trusted-Proxy", readme)
+        self.assertIn("request_header -Authorization", readme)
+        self.assertIn("request_header -X-Douk-Token", readme)
         self.assertIn(
             "copy_headers X-Tradedocs-User-Id X-Tradedocs-User-Email X-Tradedocs-User-Name",
             readme,

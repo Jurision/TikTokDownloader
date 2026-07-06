@@ -72,6 +72,8 @@ route @downloads_gated {
     request_header -X-Tradedocs-User-Email
     request_header -X-Tradedocs-User-Name
     request_header -X-Douk-Trusted-Proxy
+    request_header -Authorization
+    request_header -X-Douk-Token
 
     forward_auth @downloads_gated navi-save:8099 {
         uri /navi/verify
@@ -90,7 +92,7 @@ route @downloads_gated {
 
 1. 未登录 navi 时打开 `/downloads/`，应跳转到 `/navi/login`。
 2. 登录 navi 后打开 `/downloads/`，应能看到私有下载面板。
-3. 检查 `/downloads/api/health`。如果 worker 已退出、`DOUK_TRUSTED_PROXY_SECRET`/`DOUK_PRIVATE_TOKEN` 都未配置，health 会返回非 200。
+3. 检查 `/downloads/api/health`。公网 `/downloads` 路由必须配置 `DOUK_TRUSTED_PROXY_SECRET` 才会健康；如果 worker 已退出或 proxy secret 未配置，health 会返回非 200。`DOUK_PRIVATE_TOKEN` 只用于内部直连，不代表 navi 路由已就绪。
 4. 用单条抖音链接提交一个小任务，确认任务状态从 `queued` 进入执行并生成文件。
 5. 文件只应从 `/downloads/api/jobs/{job_id}/files/...` 下载，服务本身不应暴露公网端口。
 

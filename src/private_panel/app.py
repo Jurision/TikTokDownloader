@@ -15,6 +15,7 @@ from .worker import worker_loop
 
 
 INTERRUPTED_JOB_ERROR = "Worker restarted before completion"
+MAX_HEALTHY_WORKER_ERRORS = 0
 
 
 def _job_store(volume_root: Path) -> JobStore:
@@ -104,7 +105,13 @@ def _auth_health() -> dict[str, bool]:
     }
 
 
+def _summarize_worker_error(exc: Exception) -> str:
+    return f"{type(exc).__name__}: {exc}".replace("\r", " ").replace("\n", " ")[:500]
+
+
 def _worker_state(app: FastAPI, start_worker: bool) -> str:
+    if getattr(app.state, "worker_error_count", 0) > MAX_HEALTHY_WORKER_ERRORS:
+        return "degraded"
     if not start_worker:
         return "disabled"
     task = getattr(app.state, "worker_task", None)
@@ -132,7 +139,14 @@ def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = Tr
 
         executor = PrivatePanelExecutor(root)
         store.mark_interrupted_running_jobs_failed(INTERRUPTED_JOB_ERROR)
-        worker_task = asyncio.create_task(worker_loop(store, executor))
+        app.state.worker_error_count = 0
+        app.state.worker_last_error = ""
+
+        def record_worker_error(exc: Exception) -> None:
+            app.state.worker_error_count += 1
+            app.state.worker_last_error = _summarize_worker_error(exc)
+
+        worker_task = asyncio.create_task(worker_loop(store, executor, on_error=record_worker_error))
         app.state.worker_task = worker_task
         try:
             yield
@@ -157,12 +171,19 @@ def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = Tr
         await asyncio.sleep(0)
         auth = _auth_health()
         worker = _worker_state(app, start_worker)
-        ok = any(auth.values()) and worker not in {"missing", "cancelled", "failed", "stopped"}
+        ok = auth["trusted_proxy"] and worker not in {
+            "missing",
+            "cancelled",
+            "degraded",
+            "failed",
+            "stopped",
+        }
         return JSONResponse(
             {
                 "ok": ok,
                 "service": "private-download-panel",
                 "worker": worker,
+                "worker_error": getattr(app.state, "worker_last_error", ""),
                 "auth": auth,
             },
             status_code=200 if ok else 503,

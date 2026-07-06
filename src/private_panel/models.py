@@ -33,7 +33,7 @@ class PanelUser(BaseModel):
 
 
 class JobCreate(BaseModel):
-    kind: JobKind = JobKind.AUTO
+    kind: JobKind = JobKind.DOUYIN_SINGLE
     input_text: str = Field("", max_length=12000)
 
 

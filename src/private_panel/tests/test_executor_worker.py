@@ -257,11 +257,14 @@ class PrivatePanelExecutorWorkerTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_worker_loop_continues_after_transient_store_error(self):
         store = TransientFailingStore()
+        errors = []
 
         with self.assertRaises(KeyboardInterrupt):
-            await worker_loop(store, RecordingExecutor(), poll_seconds=0)
+            await worker_loop(store, RecordingExecutor(), poll_seconds=0, on_error=errors.append)
 
         self.assertEqual(store.calls, 2)
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], RuntimeError)
 
 
 if __name__ == "__main__":

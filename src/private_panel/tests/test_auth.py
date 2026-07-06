@@ -17,6 +17,7 @@ class PrivatePanelAuthTests(unittest.IsolatedAsyncioTestCase):
     def test_models_include_first_slice_job_kinds(self):
         self.assertEqual(JobKind.DOUYIN_SINGLE.value, "douyin_single")
         self.assertEqual(JobKind.DOUYIN_FAVORITES.value, "douyin_favorites")
+        self.assertEqual(JobKind.DOUYIN_SINGLE, JobKind("douyin_single"))
         self.assertEqual(JobKind.TIKTOK_SINGLE.value, "tiktok_single")
         self.assertEqual(JobStatus.QUEUED.value, "queued")
         self.assertEqual(JobStatus.RUNNING.value, "running")

@@ -56,12 +56,13 @@ class PrivatePanelAppTests(unittest.TestCase):
                 "ok": True,
                 "service": "private-download-panel",
                 "worker": "running",
+                "worker_error": "",
                 "auth": {"trusted_proxy": True, "token": False},
             },
         )
 
     def test_health_returns_503_when_worker_task_is_dead(self):
-        async def failing_worker_loop(store, executor):
+        async def failing_worker_loop(store, executor, on_error=None):
             raise RuntimeError("worker crashed")
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
@@ -84,10 +85,36 @@ class PrivatePanelAppTests(unittest.TestCase):
         self.assertFalse(response.json()["ok"])
         self.assertEqual(response.json()["auth"], {"trusted_proxy": False, "token": False})
 
+    def test_health_returns_503_when_only_token_auth_is_configured(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            app = create_panel_app(Path(temp), start_worker=False)
+            with patch.dict("os.environ", {"DOUK_PRIVATE_TOKEN": "secret"}, clear=True):
+                with TestClient(app) as client:
+                    response = client.get("/downloads/api/health")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertFalse(response.json()["ok"])
+        self.assertEqual(response.json()["auth"], {"trusted_proxy": False, "token": True})
+
+    def test_health_reports_worker_degraded_after_worker_error(self):
+        async def degraded_worker_loop(store, executor, on_error=None):
+            on_error(RuntimeError("database is locked"))
+            await asyncio.sleep(3600)
+
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            with patch("src.private_panel.app.worker_loop", new=degraded_worker_loop):
+                app = create_panel_app(Path(temp))
+                with TestClient(app) as client:
+                    response = client.get("/downloads/api/health")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["worker"], "degraded")
+        self.assertIn("RuntimeError: database is locked", response.json()["worker_error"])
+
     def test_app_starts_and_stops_background_worker(self):
         worker_calls = []
 
-        async def fake_worker_loop(store, executor):
+        async def fake_worker_loop(store, executor, on_error=None):
             worker_calls.append((store, executor))
             await asyncio.sleep(3600)
 
@@ -109,7 +136,7 @@ class PrivatePanelAppTests(unittest.TestCase):
         worker_calls = []
         worker_observed_statuses = []
 
-        async def fake_worker_loop(store, executor):
+        async def fake_worker_loop(store, executor, on_error=None):
             worker_calls.append((store, executor))
             worker_observed_statuses.append(store.get_job(interrupted.id).status)
             await asyncio.sleep(3600)
@@ -135,7 +162,7 @@ class PrivatePanelAppTests(unittest.TestCase):
     def test_app_can_disable_background_worker_for_isolated_tests(self):
         worker_calls = []
 
-        async def fake_worker_loop(store, executor):
+        async def fake_worker_loop(store, executor, on_error=None):
             worker_calls.append((store, executor))
 
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
