@@ -14,7 +14,14 @@ Do not publish a host port for this service. 浏览器访问应只通过 Caddy �
 这些命令需要在完整仓库 checkout 的根目录运行，因为 `docker-compose.yml` 使用 `../..` 作为构建上下文。不要只复制 `deploy/private-panel` 目录到服务器单独运行。
 
 1. 确认 Caddy/navi 所在 Docker 网络名为 `oceverse_halo_network`。
-2. 复制环境文件：
+2. 复制环境文件。VPS / Linux:
+
+   ```bash
+   cp deploy/private-panel/env.example deploy/private-panel/.env
+   chmod 600 deploy/private-panel/.env
+   ```
+
+   Windows 本地检查可用：
 
    ```powershell
    Copy-Item deploy/private-panel/env.example deploy/private-panel/.env
@@ -66,7 +73,7 @@ forward_auth @downloads_gated navi-save:8099 {
 }
 
 handle /downloads {
-    reverse_proxy douk-private-panel:5555
+    redir /downloads/ 308
 }
 
 handle /downloads/* {

@@ -5,5 +5,6 @@ __pycache__/
 /.idea/
 /.run/
 /Volume/
+/deploy/private-panel/.env
 !/.github/
 /automation/douyin_favorites_sync.local.json

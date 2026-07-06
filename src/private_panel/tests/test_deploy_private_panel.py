@@ -45,10 +45,20 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
             "copy_headers X-Tradedocs-User-Id X-Tradedocs-User-Email X-Tradedocs-User-Name",
             readme,
         )
+        self.assertIn("redir /downloads/ 308", readme)
         self.assertIn("reverse_proxy douk-private-panel:5555", readme)
+        self.assertIn("cp deploy/private-panel/env.example deploy/private-panel/.env", readme)
+        self.assertIn("chmod 600 deploy/private-panel/.env", readme)
         self.assertIn("docker compose -f deploy/private-panel/docker-compose.yml config --quiet", readme)
         self.assertIn("docker compose -f deploy/private-panel/docker-compose.yml down", readme)
         self.assertIn("Do not publish a host port", readme)
+
+    def test_local_env_file_is_ignored_by_git_and_docker_build_context(self):
+        gitignore = Path(".gitignore").read_text(encoding="utf-8")
+        dockerignore = Path(".dockerignore").read_text(encoding="utf-8")
+
+        self.assertIn("/deploy/private-panel/.env", gitignore)
+        self.assertIn("deploy/private-panel/.env", dockerignore)
 
 
 if __name__ == "__main__":
