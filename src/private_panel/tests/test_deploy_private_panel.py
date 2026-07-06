@@ -6,6 +6,8 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
     def test_compose_uses_internal_network_without_public_ports(self):
         compose = Path("deploy/private-panel/docker-compose.yml").read_text(encoding="utf-8")
 
+        self.assertIn("douk-private-panel:", compose)
+        self.assertIn("container_name: douk-private-panel", compose)
         self.assertIn("context: ../..", compose)
         self.assertIn("dockerfile: Dockerfile", compose)
         self.assertIn("env_file:", compose)
@@ -20,6 +22,8 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
         self.assertIn('- "5555"', compose)
         self.assertIn("douk_private_panel_volume:/app/Volume", compose)
         self.assertNotIn("ports:", compose)
+        self.assertNotIn("network_mode:", compose)
+        self.assertNotIn("network_mode: host", compose)
 
     def test_env_example_names_private_token_without_secret_value(self):
         env_text = Path("deploy/private-panel/env.example").read_text(encoding="utf-8")
@@ -42,6 +46,8 @@ class PrivatePanelDeployArtifactsTests(unittest.TestCase):
             readme,
         )
         self.assertIn("reverse_proxy douk-private-panel:5555", readme)
+        self.assertIn("docker compose -f deploy/private-panel/docker-compose.yml config --quiet", readme)
+        self.assertIn("docker compose -f deploy/private-panel/docker-compose.yml down", readme)
         self.assertIn("Do not publish a host port", readme)
 
 

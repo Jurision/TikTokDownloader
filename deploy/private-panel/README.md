@@ -11,6 +11,8 @@ Do not publish a host port for this service. 浏览器访问应只通过 Caddy �
 
 ## 启动前准备
 
+这些命令需要在完整仓库 checkout 的根目录运行，因为 `docker-compose.yml` 使用 `../..` 作为构建上下文。不要只复制 `deploy/private-panel` 目录到服务器单独运行。
+
 1. 确认 Caddy/navi 所在 Docker 网络名为 `oceverse_halo_network`。
 2. 复制环境文件：
 
@@ -20,6 +22,16 @@ Do not publish a host port for this service. 浏览器访问应只通过 Caddy �
 
 3. 在 `.env` 中填写一个足够长的随机 `DOUK_PRIVATE_TOKEN`。
 4. 确认持久卷中的 `/app/Volume/settings.json` 已配置下载所需 Cookie。没有 Cookie 时，提交任务会入队，但下载会失败。
+
+## 预检
+
+部署前先验证 Compose 配置：
+
+```powershell
+docker compose -f deploy/private-panel/docker-compose.yml config --quiet
+```
+
+如果这一步提示缺少 `.env`，先按上面的步骤从 `env.example` 创建 `.env`。如果提示找不到 `oceverse_halo_network`，先确认 Caddy/navi 所在 Docker 网络已经创建并且 Caddy 容器也加入了该网络。
 
 ## 启动服务
 
@@ -68,3 +80,13 @@ handle /downloads/* {
 2. 登录 navi 后打开 `/downloads/`，应能看到私有下载面板。
 3. 用单条抖音链接提交一个小任务，确认任务状态从 `queued` 进入执行并生成文件。
 4. 文件只应从 `/downloads/api/jobs/{job_id}/files/...` 下载，服务本身不应暴露公网端口。
+
+## 回滚
+
+如果只需要停止面板服务，不改 Caddy：
+
+```powershell
+docker compose -f deploy/private-panel/docker-compose.yml down
+```
+
+如果已经修改了 Caddyfile，先恢复 Caddy 中 `/downloads` 相关片段，再运行 Caddy 配置校验和 reload。生产部署和 Caddy reload 需要单独确认后再执行。
