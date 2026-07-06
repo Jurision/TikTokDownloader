@@ -7,7 +7,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from src.private_panel.app import create_panel_app
-from src.private_panel.models import JobStatus
+from src.private_panel.models import JobKind, JobStatus
 
 
 class PrivatePanelAppTests(unittest.TestCase):
@@ -52,6 +52,33 @@ class PrivatePanelAppTests(unittest.TestCase):
 
         executor.assert_called_once_with(Path(temp))
         self.assertEqual(worker_calls, [(app.state.job_store, executor.return_value)])
+
+    def test_app_marks_interrupted_running_jobs_failed_before_worker_start(self):
+        worker_calls = []
+        worker_observed_statuses = []
+
+        async def fake_worker_loop(store, executor):
+            worker_calls.append((store, executor))
+            worker_observed_statuses.append(store.get_job(interrupted.id).status)
+            await asyncio.sleep(3600)
+
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            with patch("src.private_panel.app.PrivatePanelExecutor"):
+                with patch("src.private_panel.app.worker_loop", new=fake_worker_loop):
+                    app = create_panel_app(Path(temp))
+                    interrupted = app.state.job_store.create_job(
+                        kind=JobKind.DOUYIN_SINGLE,
+                        input_text="https://v.douyin.com/interrupted/",
+                    )
+                    app.state.job_store.claim_next_queued()
+
+                    with TestClient(app):
+                        loaded = app.state.job_store.get_job(interrupted.id)
+                        self.assertEqual(loaded.status, JobStatus.FAILED)
+                        self.assertEqual(loaded.error, "Worker restarted before completion")
+
+        self.assertEqual(len(worker_calls), 1)
+        self.assertEqual(worker_observed_statuses, [JobStatus.FAILED])
 
     def test_app_can_disable_background_worker_for_isolated_tests(self):
         worker_calls = []

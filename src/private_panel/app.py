@@ -14,6 +14,9 @@ from .models import JobCreate, JobRecord, PanelUser
 from .worker import worker_loop
 
 
+INTERRUPTED_JOB_ERROR = "Worker restarted before completion"
+
+
 def _job_store(volume_root: Path) -> JobStore:
     return JobStore(Path(volume_root) / "private_panel" / "jobs.db")
 
@@ -107,6 +110,7 @@ def create_panel_app(volume_root: Path | str = "Volume", start_worker: bool = Tr
             return
 
         executor = PrivatePanelExecutor(root)
+        store.mark_interrupted_running_jobs_failed(INTERRUPTED_JOB_ERROR)
         worker_task = asyncio.create_task(worker_loop(store, executor))
         app.state.worker_task = worker_task
         try:

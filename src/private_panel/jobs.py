@@ -141,6 +141,25 @@ class JobStore:
             error=error,
         )
 
+    def mark_interrupted_running_jobs_failed(self, error: str) -> int:
+        now = utc_now()
+        with self._connect() as db:
+            cursor = db.execute(
+                """
+                UPDATE jobs
+                SET status = ?, finished_at = ?, output_dir = '', log_tail = ?, error = ?
+                WHERE status = ?
+                """,
+                (
+                    JobStatus.FAILED.value,
+                    now,
+                    error,
+                    error,
+                    JobStatus.RUNNING.value,
+                ),
+            )
+            return cursor.rowcount
+
     def update_progress(
         self,
         job_id: str,

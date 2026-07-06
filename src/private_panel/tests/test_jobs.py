@@ -54,6 +54,41 @@ class PrivatePanelJobStoreTests(unittest.TestCase):
 
         self.assertIsNone(claimed)
 
+    def test_mark_interrupted_running_jobs_failed(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
+            store = JobStore(Path(temp) / "jobs.db")
+            running = store.create_job(JobKind.DOUYIN_SINGLE, "running")
+            store.claim_next_queued()
+            succeeded = store.create_job(JobKind.DOUYIN_SINGLE, "succeeded")
+            store.claim_next_queued()
+            store.mark_succeeded(succeeded.id, "private_panel/jobs/succeeded/files", "done")
+            failed = store.create_job(JobKind.DOUYIN_SINGLE, "failed")
+            store.claim_next_queued()
+            store.mark_failed(failed.id, "already failed", "already failed")
+            queued = store.create_job(JobKind.DOUYIN_SINGLE, "queued")
+
+            count = store.mark_interrupted_running_jobs_failed("worker restarted")
+            second_count = store.mark_interrupted_running_jobs_failed("worker restarted again")
+            running_loaded = store.get_job(running.id)
+            queued_loaded = store.get_job(queued.id)
+            succeeded_loaded = store.get_job(succeeded.id)
+            failed_loaded = store.get_job(failed.id)
+
+        self.assertEqual(count, 1)
+        self.assertEqual(second_count, 0)
+        self.assertEqual(running_loaded.status, JobStatus.FAILED)
+        self.assertEqual(running_loaded.error, "worker restarted")
+        self.assertEqual(running_loaded.log_tail, "worker restarted")
+        self.assertEqual(running_loaded.output_dir, "")
+        self.assertTrue(running_loaded.finished_at)
+        self.assertEqual(queued_loaded.status, JobStatus.QUEUED)
+        self.assertEqual(succeeded_loaded.status, JobStatus.SUCCEEDED)
+        self.assertEqual(succeeded_loaded.error, "")
+        self.assertEqual(succeeded_loaded.log_tail, "done")
+        self.assertEqual(failed_loaded.status, JobStatus.FAILED)
+        self.assertEqual(failed_loaded.error, "already failed")
+        self.assertEqual(failed_loaded.log_tail, "already failed")
+
     def test_claim_next_queued_job_does_not_double_claim_across_stores(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp:
             path = Path(temp) / "jobs.db"
