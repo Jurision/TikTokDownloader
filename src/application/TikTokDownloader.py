@@ -350,7 +350,7 @@ class TikTokDownloader:
                     "复制 Cookie 内容至剪贴板后，按回车键确认继续；若输入任意内容并按回车，则取消操作："
                 )
             ):
-                self.logger.info(_("取消写入 Cookie 操作！"))
+                self.console.info(_("取消写入 Cookie 操作！"))
                 return
             if self.cookie.run(tiktok=tiktok):
                 await self.check_settings()
@@ -362,7 +362,7 @@ class TikTokDownloader:
                     )
                 )
             ):
-                self.logger.info(_("取消写入 Cookie 操作！"))
+                self.console.info(_("取消写入 Cookie 操作！"))
                 return
             if self.cookie.run(cookie, tiktok=tiktok):
                 await self.check_settings()
