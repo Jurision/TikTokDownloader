@@ -86,23 +86,67 @@ def describe(text: str) -> str:
 
 def looks_like_url(text: str) -> bool:
     head = text.split("=", 1)[0]
-    return text.startswith(("http://", "https://", "/")) or "?" in head
+    if text.startswith(("http://", "https://", "/")) or "?" in head:
+        return True
+    # 没带协议头的链接，例如 www.tiktok.com/@user/video/712...
+    return bool(re.match(r"^(?:www\.)?[a-z0-9-]+\.[a-z]{2,}/", text, re.IGNORECASE))
+
+
+def is_opaque_token(text: str) -> bool:
+    """看着像一段高熵凭证（纯十六进制/base64），回显它有泄露风险。"""
+    return bool(re.fullmatch(r"[A-Za-z0-9_%+/.-]{16,}={0,2}", text)) and not any(
+        c in text for c in "/ "
+    )
+
+
+def from_browser(browser: str, domain: str) -> tuple[str, str]:
+    """直接读浏览器 Cookie 库，绕开 DevTools 复制。返回 (cookie 串, 错误说明)。"""
+    try:
+        import rookiepy
+    except ImportError:
+        return "", "rookiepy 未安装：uv pip install rookiepy"
+
+    getter = getattr(rookiepy, browser.lower(), None)
+    if getter is None:
+        return "", f"不支持的浏览器：{browser}"
+    try:
+        items = getter(domains=[domain])
+    except Exception as error:  # noqa: BLE001
+        return "", f"{browser} 读取失败：{error}"
+
+    pairs = [
+        f"{i['name']}={i['value']}"
+        for i in items
+        if i.get("name") and i.get("value")
+    ]
+    if not pairs:
+        return "", f"{browser} 里没有 {domain} 的 Cookie（可能没在该浏览器登录）"
+    return "; ".join(pairs), ""
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tiktok", action="store_true",
                     help="写入 cookie_tiktok 而不是 cookie")
+    ap.add_argument("--browser", metavar="NAME",
+                    help="直接从浏览器读取（firefox / chrome / edge / brave …），"
+                         "不走剪贴板。Chrome 系 v130+ 需管理员权限，Firefox 无此限制")
     args = ap.parse_args()
     field = "cookie_tiktok" if args.tiktok else "cookie"
     platform = "TikTok" if args.tiktok else "抖音"
+    domain = "tiktok.com" if args.tiktok else "douyin.com"
 
-    raw = sys.stdin.read()
-    if not raw.strip():
-        print("剪贴板是空的。先去 DevTools 复制 Cookie 值再跑。")
-        return 2
-
-    cookie = extract(raw)
+    if args.browser:
+        cookie, err = from_browser(args.browser, domain)
+        if err:
+            print(err)
+            return 5
+    else:
+        raw = sys.stdin.read()
+        if not raw.strip():
+            print("剪贴板是空的。先去 DevTools 复制 Cookie 值再跑。")
+            return 2
+        cookie = extract(raw)
 
     if looks_like_url(cookie):
         print("剪贴板里是一个 URL / 查询串，不是 Cookie。")
@@ -113,6 +157,10 @@ def main() -> int:
     if "=" not in cookie or ";" not in cookie:
         print("内容不像 Cookie —— 完整的 Cookie 是几十段 `key=value;` 拼起来的长串。")
         print(f"  实际拿到：{describe(cookie)}")
+        if is_opaque_token(cookie):
+            print("  内容看着像单个凭证值，为避免泄露不予回显。")
+        else:
+            print(f"  内容：{cookie}")
         print()
         print("最可能的原因：在 DevTools 的 Cookie 表格里右键了某一行，")
         print("那只会复制单个值。要的是整条 Cookie 请求头，两种拿法：")

@@ -24,7 +24,13 @@
     .\set-cookie.ps1 -TikTok
 #>
 
-param([switch]$TikTok)
+param(
+    [switch]$TikTok,
+
+    # 直接从浏览器 Cookie 库读取，绕开 DevTools 复制。
+    # Chrome/Edge v130+ 需管理员权限；Firefox 无此限制。
+    [string]$FromBrowser
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -38,16 +44,21 @@ if (-not (Test-Path $Python)) {
 $env:PYTHONIOENCODING = 'utf-8'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-$raw = Get-Clipboard -Raw
-if ([string]::IsNullOrWhiteSpace($raw)) {
-    Write-Host '剪贴板是空的。' -ForegroundColor Red
-    exit 2
-}
-
 $pyArgs = @((Join-Path $Here 'tools\set_cookie.py'))
 if ($TikTok) { $pyArgs += '--tiktok' }
 
-$raw | & $Python @pyArgs
+if ($FromBrowser) {
+    $pyArgs += @('--browser', $FromBrowser)
+    & $Python @pyArgs
+}
+else {
+    $raw = Get-Clipboard -Raw
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+        Write-Host '剪贴板是空的。' -ForegroundColor Red
+        exit 2
+    }
+    $raw | & $Python @pyArgs
+}
 $code = $LASTEXITCODE
 
 if ($code -eq 0) {
