@@ -8,22 +8,27 @@
 <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/JoeanAmier/TikTokDownloader?style=flat-square&color=fda7df">
 <img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/JoeanAmier/TikTokDownloader?style=flat-square&color=a29bfe">
 <br>
-<img alt="Static Badge" src="https://img.shields.io/badge/Python-3.12-b8e994?style=flat-square&logo=python&labelColor=3dc1d3">
+<img alt="Static Badge" src="https://img.shields.io/badge/Python-≥3.12-b8e994?style=flat-square&logo=python&labelColor=3dc1d3">
 <img alt="GitHub release (with filter)" src="https://img.shields.io/github/v/release/JoeanAmier/TikTokDownloader?style=flat-square&color=48dbfb">
 <img src="https://img.shields.io/badge/Sourcery-enabled-884898?style=flat-square&color=1890ff" alt="">
 <img alt="Static Badge" src="https://img.shields.io/badge/Docker-badc58?style=flat-square&logo=docker">
 <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/JoeanAmier/TikTokDownloader/total?style=flat-square&color=ffdd59">
-</div>
 <br>
-<p>🔥 <b>TikTok 发布/喜欢/合辑/直播/视频/图集/音乐；抖音发布/喜欢/收藏/收藏夹/视频/图集/实况/直播/音乐/合集/评论/账号/搜索/热榜数据采集工具：</b>完全开源，基于 HTTPX 模块实现的免费数据采集和文件下载工具；批量下载抖音账号发布、喜欢、收藏、收藏夹作品；批量下载 TikTok 账号发布、喜欢作品；下载抖音链接或 TikTok 链接作品；获取抖音直播拉流地址；下载抖音直播视频；获取 TikTok 直播拉流地址；下载 TikTok 直播视频；采集抖音作品评论数据；批量下载抖音合集作品；批量下载 TikTok 合辑作品；采集抖音账号详细数据；采集抖音用户 / 作品 / 直播搜索结果；采集抖音热榜数据。</p>
-<p>⭐ <b>项目版本：<code>5.8 Beta</code>；文档更新日期：<code>2026/5/12</code></b></p>
-<p>⭐ <b>项目文档正在完善，如果发现任何错误或描述模糊之处，请告知作者以便改进！本项目历史名称：<code>TikTokDownloader</code></b></p>
+<p>🔥 抖音 / TikTok 平台作品下载/数据采集工具</p>
+<p>⭐ 本项目历史名称：<code>TikTokDownloader</code></p>
+</div>
+<hr>
+<p>⚠️ 当前版本部分功能已失效。项目计划在 <code>6.0</code> 版本进行重构，重构完成后将会修复部分失效的功能！</p>
+<p>⚠️ 本项目的加密参数算法已过期失效；为确保项目合法合规，参数算法不再维护，部分功能可能无法正常工作。如需使用，请自行准备加密参数生成代码，配置方法请查阅 <a href="#encipher">加密参数生成代码配置</a>！</p>
+<p>⭐ <b>项目文档版本：<code>5.8 Beta</code>；文档更新日期：<code>2026/8/29</code></b></p>
 <p>⭐ Due to the author’s limited time and energy, the complete English documentation for this project is not yet available. If you wish to read the full documentation, we recommend using AI translation tools to assist your understanding. If you would like to contribute to the translation, your help is warmly welcomed.</p>
 <hr>
 <h1>快速入门</h1>
 <p>⭐ 本项目包含手动构建可执行文件的 GitHub Actions，使用者可以随时使用 GitHub Actions 将最新源码构建为可执行文件！</p>
 <p>⭐ 自动构建可执行文件教程请查阅本文档的 <code>构建可执行文件指南</code> 部分；如果需要更加详细的图文教程，请 <a href="https://mp.weixin.qq.com/s/TorfoZKkf4-x8IBNLImNuw">查阅文章</a>！</p>
 <p><strong>注意：由于 Mac OS 平台的可执行文件 <code>main</code> 未经过代码签名，首次运行时会受到系统安全限制。请先在终端执行 <code>xattr -cr main.app</code> 命令移除安全标记，执行一次后即可正常运行。</strong></p>
+<p><strong>Node.js（可选）</strong>：部分功能需要使用 Node.js 执行 JavaScript 代码，使用这些功能时请安装 <strong>Node.js >= 18</strong>；未安装 Node.js 不影响其他功能的正常使用。</p>
+<hr>
 <ol>
 <li><b>运行可执行文件</b> 或者 <b>配置环境运行</b>
 <ol><b>运行可执行文件</b>
@@ -41,17 +46,16 @@
 </li>
 <li>阅读 DouK-Downloader 的免责声明，根据提示输入内容</li>
 <li>将 Cookie 信息写入配置文件
+<ol><b>手动输入 Cookie</b>
+<li>参考 <a href="https://github.com/JoeanAmier/TikTokDownloader/blob/master/docs/Cookie%E8%8E%B7%E5%8F%96%E6%95%99%E7%A8%8B.md">Cookie 提取教程</a>，复制所需 Cookie 至剪贴板</li>
+<li>选择 <code>手动输入 Cookie</code> 选项，粘贴 Cookie 内容后按照程序提示操作</li>
+</ol>
 <ol><b>从剪贴板读取 Cookie</b>
 <li>参考 <a href="https://github.com/JoeanAmier/TikTokDownloader/blob/master/docs/Cookie%E8%8E%B7%E5%8F%96%E6%95%99%E7%A8%8B.md">Cookie 提取教程</a>，复制所需 Cookie 至剪贴板</li>
 <li>选择 <code>从剪贴板读取 Cookie</code> 选项，程序会自动读取剪贴板的 Cookie 并写入配置文件</li>
 </ol>
 <ol><b><del>从浏览器读取 Cookie（弃用）</del></b>
 <li><del>选择 <code>从浏览器读取 Cookie</code> 选项，按照提示输入浏览器类型或序号</del></li>
-</ol>
-<ol><b><del>扫码登录获取 Cookie</del>（失效）</b>
-<li><del>选择 <code>扫码登录获取 Cookie</code> 选项，程序会显示登录二维码图片，并使用默认应用打开图片</del></li>
-<li><del>使用抖音 APP 扫描二维码并登录账号</del></li>
-<li><del>按照提示操作，程序会自动将 Cookie 写入配置文件</del></li>
 </ol>
 </li>
 <li>返回程序界面，依次选择 <code>终端交互模式</code> -> <code>批量下载链接作品</code> -> <code>手动输入待采集的作品链接</code></li>
@@ -83,6 +87,78 @@
 <li>Cookie 仅需在失效后重新写入配置文件，并非每次运行程序都要写入配置文件！</li>
 <li><p>Cookie 会影响下载的视频文件分辨率，如果无法下载最高分辨率的视频文件，请尝试更新 Cookie！</li>
 <li>程序获取数据失败时，可以尝试更新 Cookie 或者使用已登录的 Cookie！</li>
+</ul>
+<h1 id="encipher">加密参数生成代码配置</h1>
+<p>此章节涉及加密参数生成代码的编写与调试，需要具备一定的编程基础（如 Python/JavaScript、HTTP 请求调试等），建议有相关经验的用户阅读！</p>
+<p>加密参数生成代码配置是可选的；若项目功能正常，无需额外配置！若功能异常，可能是加密参数无效，此时您需要自行准备加密参数的生成代码！</p>
+<p>加密参数代码模板：</p>
+
+```python
+from abc import ABC, abstractmethod
+
+# import curl_cffi  # 可用于发送 HTTP 请求, Can be used to send HTTP requests
+# https://github.com/lexiforest/curl_cffi
+# import javascript  # 可用于执行 JavaScript 代码, Can be used to execute JavaScript code
+# Requires Node.js 18 or newer.
+# https://github.com/extremeheat/JSPyBridge
+
+__all__ = [
+    "DouYinParams",
+    "TikTokParams",
+]
+
+
+class Params(ABC):
+    def __init__(self): ...
+
+    @abstractmethod
+    def sign(
+            self,
+            query: dict | str = "",
+            data: dict | str | None = None,
+            method: str = "",
+            user_agent: str = "",
+            ms_token: str = "",
+    ) -> dict[str, str]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def sign_url(
+            self,
+            base_url: str = "",
+            query: dict | str = "",
+            data: dict | str | None = None,
+            method: str = "",
+            user_agent: str = "",
+            ms_token: str = "",
+    ) -> str:
+        raise NotImplementedError
+
+
+class DouYinParams(Params):
+    """
+    抖音接口加密参数
+    """
+
+    ...
+
+
+class TikTokParams(Params):
+    """
+    TikTok 接口加密参数
+    """
+
+    ...
+```
+
+<ul>
+<li>加密参数代码文件固定命名：<code>encipher.py</code></li>
+<li>加密参数代码文件固定放置在项目根目录</li>
+<li>加密参数代码支持调用 <code>curl_cffi</code>、<code>never_jscore</code> 库及 Python 标准库</li>
+<li>每个平台的加密参数类需继承 <code>Params</code> 基类，并实现 <code>sign</code>（生成签名参数）与 <code>sign_url</code>（生成带签名的完整 URL/查询字符串）方法</li>
+<li>模板中的加密参数类无需全部实现，可根据实际需求删除不需要的类</li>
+<li>可以通过执行自定义的 JavaScript 代码生成加密参数</li>
+<li>可以通过调用 API 获取加密参数结果，适合已有参数生成服务的情况</li>
 </ul>
 <h1>入门说明</h1>
 <h2>关于终端</h2>
@@ -427,6 +503,12 @@ built with gcc 14.2.0 (crosstool-NG 1.27.0.18_7458341)
 <td align="center">无</td>
 </tr>
 <tr>
+<td align="center">original_quality</td>
+<td align="center">bool</td>
+<td align="center">是否下载最高质量视频文件</td>
+<td align="center">false</td>
+</tr>
+<tr>
 <td align="center">douyin_platform</td>
 <td align="center">bool</td>
 <td align="center"><a href="#supplement"><sup>5</sup></a>是否启用抖音平台功能</td>
@@ -534,6 +616,7 @@ built with gcc 14.2.0 (crosstool-NG 1.27.0.18_7458341)
   "run_command": "6 2 1",
   "ffmpeg": "C:\\DouK-Downloader\\ffmpeg.exe",
   "live_qualities": "1",
+  "original_quality": true,
   "douyin_platform": true,
   "tiktok_platform": true,
   "browser_info": {
@@ -751,17 +834,19 @@ built with gcc 14.2.0 (crosstool-NG 1.27.0.18_7458341)
 <li>设置服务器模式参数验证</li>
 </ul>
 <h1>功能介绍</h1>
+<h2>手动输入 Cookie</h2>
+<p>参考 <a href="https://github.com/JoeanAmier/TikTokDownloader/blob/master/docs/Cookie%E8%8E%B7%E5%8F%96%E6%95%99%E7%A8%8B.md">Cookie 提取教程</a>，手动从浏览器复制所需 Cookie 内容并粘贴至程序，按照程序提示操作；程序会将有效的 Cookie 写入配置文件。</p>
+<p>成功写入配置文件后，程序会提示当前 Cookie 登录状态！</p>
+<p>如果 Cookie 内容过长，部分终端可能会在输入时截断内容。建议更换支持长输入的终端，或改用 <code>从剪贴板读取 Cookie</code> 功能。</p>
 <h2>从剪贴板读取 Cookie</h2>
-<p>参考 <a href="https://github.com/JoeanAmier/TikTokDownloader/blob/master/docs/Cookie%E8%8E%B7%E5%8F%96%E6%95%99%E7%A8%8B.md">Cookie 提取教程</a>，手动从浏览器复制所需 Cookie 内容至剪贴板，再按照程序提示操作；程序会自动读取剪贴板的内容并将有效的 Cookie 写入配置文件。</p>
+<p>参考 <a href="https://github.com/JoeanAmier/TikTokDownloader/blob/master/docs/Cookie%E8%8E%B7%E5%8F%96%E6%95%99%E7%A8%8B.md">Cookie 提取教程</a>，手动从浏览器复制所需 Cookie 内容至剪贴板，按照程序提示操作；程序会自动读取剪贴板的内容并将有效的 Cookie 写入配置文件。</p>
 <p>成功写入配置文件后，程序会提示当前 Cookie 登录状态！</p>
-<h2>从浏览器读取 Cookie</h2>
-<p>自动读取本地浏览器的 Cookie 数据，并提取所需 Cookie 写入配置文件。</p>
-<p>成功写入配置文件后，程序会提示当前 Cookie 登录状态！</p>
-<p>Windows 系统需要以管理员身份运行程序才能读取 Chromium、Chrome、Edge 浏览器 Cookie！</p>
+<p>此功能在 Docker 容器环境不可用！</p>
+<h2><del>从浏览器读取 Cookie</del></h2>
+<p><del>自动读取本地浏览器的 Cookie 数据，并提取所需 Cookie 写入配置文件。</del></p>
+<p><del>成功写入配置文件后，程序会提示当前 Cookie 登录状态！</del></p>
+<p><del>Windows 系统需要以管理员身份运行程序才能读取 Chromium、Chrome、Edge 浏览器 Cookie！</del></p>
 <p><strong>兼容性提醒：此功能依赖的第三方模块已长期未更新，可能无法正常支持最新浏览器版本。若功能出现异常，请尝试手动获取 Cookie！</strong></p>
-<h2><del>扫码登录获取 Cookie</del></h2>
-<p><del>程序自动获取抖音登录二维码，随后会在终端输出二维码，并使用系统默认图片浏览器打开二维码图片，使用者通过抖音 APP 扫码并登录账号，操作后关闭二维码图片窗口，程序会自动检查登录结果并将登录后的 Cookie 写入配置文件。</del></p>
-<p><b>注意：</b>扫码登录可能会导致抖音账号被风控，该功能仅限学习研究，未来可能禁用或移除该功能！</p>
 <h2>终端交互模式</h2>
 <p>功能最全面的模式，支持全部功能。</p>
 <h3>批量下载账号作品(抖音)</h3>
@@ -1102,18 +1187,6 @@ built with gcc 14.2.0 (crosstool-NG 1.27.0.18_7458341)
 <li>直播视频会下载至 <code>root</code> 参数路径下的 <code>Live</code> 文件夹。</li>
 <li>按下 <code>Ctrl + C</code> 终止程序或 <code>ffmpeg</code> 并不会导致已下载文件丢失或损坏，但无法继续下载。</li>
 </ul>
-<h3><del>批量下载视频原画(TikTok)</del></h3>
-<p><strong>注意：本功能为实验性功能，依赖第三方 API 服务，可能不稳定或存在限制！</strong></p>
-<ol>
-<li>手动输入待采集的作品链接。</li>
-<li>输入文本文档路径，读取文件包含的作品链接。</li>
-</ol>
-<p>支持链接格式：</p>
-<ul>
-<li><code>https://vm.tiktok.com/分享码/</code></li>
-<li><code>https://www.tiktok.com/@TikTok号/video/作品ID</code></li>
-</ul>
-<p>作品会下载至 <code>root</code> 参数和 <code>folder_name</code> 参数拼接成的文件夹。</p>
 <h2>后台监听模式</h2>
 <h3>剪贴板监听下载</h3>
 <p>程序会自动检测并提取剪贴板中的抖音和 TikTok 作品链接，并自动下载作品文件；如需关闭，请按下 Ctrl+C，或将剪贴板内容设置为“close”以停止监听！</p>
@@ -1122,23 +1195,26 @@ built with gcc 14.2.0 (crosstool-NG 1.27.0.18_7458341)
 <p>默认禁用局域网访问，如需开启，请修改 <code>src/custom/static.py</code> 文件的 <code>SERVER_HOST</code> 变量。</p>
 <p><strong>启动该模式后，访问 <code>http://127.0.0.1:5555/docs</code> 或者 <code>http://127.0.0.1:5555/redoc</code> 可以查阅自动生成的文档！</strong></p>
 <h3>API 调用示例代码</h3>
-<pre>
-from httpx import post
+
+```python
+from curl_cffi.requests import post
 from rich import print
 
 
 def demo():
-headers = {"token": ""}
-data = {
-"detail_id": "0123456789",
-"pages": 2,
-}
-api = "http://127.0.0.1:5555/douyin/comment"
-response = post(api, json=data, headers=headers)
-print(response.json())
+    headers = {"token": ""}
+    data = {
+        "detail_id": "0123456789",
+        "pages": 2,
+    }
+    api = "http://127.0.0.1:5555/douyin/comment"
+    response = post(api, json=data, headers=headers)
+    print(response.json())
+
 
 demo()
-</pre>
+```
+
 <h2>Web UI 交互模式</h2>
 <p><b>项目代码已重构，该模式代码尚未更新，未来开发完成重新开放！</b></p>
 <h2>启用/禁用作品下载记录</h2>

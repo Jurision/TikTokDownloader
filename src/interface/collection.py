@@ -13,7 +13,7 @@ class Collection(API):
         self,
         params: Union["Parameter", "Params"],
         cookie: str = "",
-        proxy: str = None,
+        proxy: str | None = None,
         sec_user_id: str = "",
         count=10,
         cursor=0,
@@ -85,9 +85,7 @@ class Collection(API):
         data: dict = None,
         method="GET",
         headers: dict = None,
-        encryption="GET",
         finished=False,
-        *args,
         **kwargs,
     ):
         return await super().request_data(
@@ -96,9 +94,7 @@ class Collection(API):
             data,
             method,
             headers,
-            encryption,
             finished,
-            *args,
             **kwargs,
         )
 

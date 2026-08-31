@@ -584,8 +584,10 @@ class ABogus:
 
     def get_value(
         self,
-        url_params: dict | str,
+        params: dict | str,
+        data: dict | None = None,
         method="GET",
+        user_agent=USERAGENT,
         start_time=0,
         end_time=0,
         random_num_1=None,
@@ -599,11 +601,11 @@ class ABogus:
         )
         string_2 = self.generate_string_2(
             urlencode(
-                url_params,
+                params,
                 quote_via=quote,
             )
-            if isinstance(url_params, dict)
-            else url_params,
+            if isinstance(params, dict)
+            else params,
             method,
             start_time,
             end_time,

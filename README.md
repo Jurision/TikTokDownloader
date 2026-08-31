@@ -9,16 +9,18 @@
 <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/JoeanAmier/TikTokDownloader?style=flat-square&color=fda7df">
 <img alt="GitHub code size in bytes" src="https://img.shields.io/github/languages/code-size/JoeanAmier/TikTokDownloader?style=flat-square&color=a29bfe">
 <br>
-<img alt="Static Badge" src="https://img.shields.io/badge/Python-3.12-b8e994?style=flat-square&logo=python&labelColor=3dc1d3">
+<img alt="Static Badge" src="https://img.shields.io/badge/Python-≥3.12-b8e994?style=flat-square&logo=python&labelColor=3dc1d3">
 <img alt="GitHub release (with filter)" src="https://img.shields.io/github/v/release/JoeanAmier/TikTokDownloader?style=flat-square&color=48dbfb">
 <img src="https://img.shields.io/badge/Sourcery-enabled-884898?style=flat-square&color=1890ff" alt="">
 <img alt="Static Badge" src="https://img.shields.io/badge/Docker-badc58?style=flat-square&logo=docker">
 <img alt="GitHub all releases" src="https://img.shields.io/github/downloads/JoeanAmier/TikTokDownloader/total?style=flat-square&color=ffdd59">
-</div>
 <br>
-<p>🔥 <b>TikTok 发布/喜欢/合辑/直播/视频/图集/音乐；抖音发布/喜欢/收藏/收藏夹/视频/图集/实况/直播/音乐/合集/评论/账号/搜索/热榜数据采集工具：</b>完全开源，基于 HTTPX 模块实现的免费数据采集和文件下载工具；批量下载抖音账号发布、喜欢、收藏、收藏夹作品；批量下载 TikTok 账号发布、喜欢作品；下载抖音链接或 TikTok 链接作品；获取抖音直播拉流地址；下载抖音直播视频；获取 TikTok 直播拉流地址；下载 TikTok 直播视频；采集抖音作品评论数据；批量下载抖音合集作品；批量下载 TikTok 合辑作品；采集抖音账号详细数据；采集抖音用户 / 作品 / 直播搜索结果；采集抖音热榜数据。</p>
+<p>🔥 抖音 / TikTok 平台作品下载/数据采集工具</p>
 <p>⭐ 本项目历史名称：<code>TikTokDownloader</code></p>
-<p>📣 本项目将于未来进行代码结构重构，目标是让代码更加稳健，并具备更好的可维护性与扩展性；如果你对项目设计、实现方式或优化思路有想法，欢迎提出建议或参与讨论！</p>
+</div>
+<hr>
+<p>⚠️ 当前版本部分功能已失效。项目计划在 <code>6.0</code> 版本进行重构，重构完成后将会修复部分失效的功能！</p>
+<p>⚠️ 本项目的加密参数算法已过期失效；为确保项目合法合规，参数算法不再维护，部分功能可能无法正常工作。如需使用，请自行准备加密参数生成代码，配置方法请查阅 <a href="https://github.com/JoeanAmier/TikTokDownloader/wiki/Documentation#%E5%8A%A0%E5%AF%86%E5%8F%82%E6%95%B0%E7%94%9F%E6%88%90%E4%BB%A3%E7%A0%81%E9%85%8D%E7%BD%AE">文档</a>！</p>
 <hr>
 
 # 📝 项目功能
@@ -29,7 +31,6 @@
 <li>✅ 下载抖音视频/图集</li>
 <li>✅ 下载抖音实况/动图</li>
 <li>✅ 下载最高画质视频文件</li>
-<li>✅ 下载 TikTok 视频原画</li>
 <li>✅ 下载 TikTok 视频/图集</li>
 <li>✅ 下载抖音账号发布/喜欢/收藏/收藏夹作品</li>
 <li>✅ 下载 TikTok 账号发布/喜欢作品</li>
@@ -61,7 +62,6 @@
 <li>✅ 采集抖音搜索数据</li>
 <li>✅ 采集抖音热榜数据</li>
 <li>✅ 记录已下载作品 ID</li>
-<li>☑️ <del>扫码登陆获取 Cookie</del></li>
 <li>✅ 从浏览器读取 Cookie</li>
 <li>✅ 支持 Web API 调用</li>
 <li>✅ 支持多线程下载作品</li>
@@ -103,7 +103,7 @@
 ### API 调用示例代码
 
 ```python
-from httpx import post
+from curl_cffi.requests import post
 from rich import print
 
 
@@ -129,6 +129,7 @@ demo()
 <p>⭐ 本项目包含自动构建可执行文件的 GitHub Actions，使用者可以随时使用 GitHub Actions 将最新源码构建为可执行文件！</p>
 <p>⭐ 自动构建可执行文件教程请查阅本文档的 <code>构建可执行文件指南</code> 部分；如果需要更加详细的图文教程，请 <a href="https://mp.weixin.qq.com/s/TorfoZKkf4-x8IBNLImNuw">查阅文章</a>！</p>
 <p><strong>注意：由于 Mac OS 平台的可执行文件 <code>main</code> 未经过代码签名，首次运行时会受到系统安全限制。请先在终端执行 <code>xattr -cr 项目文件夹路径</code> 命令移除安全标记，执行一次后即可正常运行。</strong></p>
+<p><strong>Node.js（可选）</strong>：部分功能需要使用 Node.js 执行 JavaScript 代码，使用这些功能时请安装 <strong>Node.js >= 18</strong>；未安装 Node.js 不影响其他功能的正常使用。</p>
 <hr>
 <ol>
 <li><b>运行可执行文件</b> 或者 <b>配置环境运行</b>（二选一）
@@ -153,17 +154,16 @@ demo()
 </li>
 <li>阅读 DouK-Downloader 的免责声明，根据提示输入内容</li>
 <li>将 Cookie 信息写入配置文件
+<ol><b>手动输入 Cookie</b>
+<li>参考 <a href="https://github.com/JoeanAmier/TikTokDownloader/blob/master/docs/Cookie%E8%8E%B7%E5%8F%96%E6%95%99%E7%A8%8B.md">Cookie 提取教程</a>，复制所需 Cookie 至剪贴板</li>
+<li>选择 <code>手动输入 Cookie</code> 选项，粘贴 Cookie 内容后按照程序提示操作</li>
+</ol>
 <ol><b>从剪贴板读取 Cookie</b>
 <li>参考 <a href="https://github.com/JoeanAmier/TikTokDownloader/blob/master/docs/Cookie%E8%8E%B7%E5%8F%96%E6%95%99%E7%A8%8B.md">Cookie 提取教程</a>，复制所需 Cookie 至剪贴板</li>
 <li>选择 <code>从剪贴板读取 Cookie</code> 选项，程序会自动读取剪贴板的 Cookie 并写入配置文件</li>
 </ol>
 <ol><b><del>从浏览器读取 Cookie（弃用）</del></b>
 <li><del>选择 <code>从浏览器读取 Cookie</code> 选项，按照提示输入浏览器类型或序号</del></li>
-</ol>
-<ol><b><del>扫码登录获取 Cookie</del>（失效）</b>
-<li><del>选择 <code>扫码登录获取 Cookie</code> 选项，程序会显示登录二维码图片，并使用默认应用打开图片</del></li>
-<li><del>使用抖音 APP 扫描二维码并登录账号</del></li>
-<li><del>按照提示操作，程序会自动将 Cookie 写入配置文件</del></li>
 </ol>
 </li>
 <li>返回程序界面，依次选择 <code>终端交互模式</code> -> <code>批量下载链接作品</code> -> <code>手动输入待采集的作品链接</code></li>
@@ -216,11 +216,11 @@ demo()
 <li>批量下载账号作品或合集作品时，如果对应的昵称或标识发生变化，程序会自动更新已下载作品文件名称中的昵称和标识</li>
 <li>程序下载文件时会先将文件下载至临时文件夹，下载完成后再移动至储存文件夹；程序运行结束时会清空临时文件夹</li>
 <li><code>批量下载收藏作品模式</code> 目前仅支持下载当前已登录 Cookie 对应账号的收藏作品，暂不支持多账号</li>
-<li>如果需要程序使用代理请求数据，请在配置文件 <code>settings.json</code> 设置 <code>proxy</code> 参数 (可以考虑使用代理平台: <a href="https://www.swiftproxy.net/?ref=TikTokDownloader">Swiftproxy</a> 或 <a href="https://bestproxy.com/?keyword=btuzoy3b">BestProxy</a>)</li>
+<li>如果需要程序使用代理请求数据，请在配置文件 <code>settings.json</code> 设置 <code>proxy</code> 参数 (可以考虑使用代理平台: <a href="https://www.swiftproxy.net/?ref=TikTokDownloader">Swiftproxy</a>)</li>
 <li>如果您的计算机没有合适的程序编辑 JSON 文件，建议使用 <a href="https://www.toolhelper.cn/JSON/JSONFormat">在线工具</a> 编辑配置文件内容，修改后需要重启软件才能生效。</li>
 <li>当程序请求用户输入内容或链接时，请注意避免输入的内容或链接包含换行符，这可能会导致预期之外的问题</li>
 <li>本项目不会支持付费作品下载，请勿反馈任何关于付费作品下载的问题</li>
-<li>Windows 系统需要以管理员身份运行程序才能读取 Chromium、Chrome、Edge 浏览器 Cookie</li>
+<li><del>Windows 系统需要以管理员身份运行程序才能读取 Chromium、Chrome、Edge 浏览器 Cookie</del></li>
 <li>本项目并未针对程序多开的情况进行优化，如需程序多开，请复制整个项目的文件夹，避免出现预期之外的问题</li>
 <li>程序运行过程中，如需终止程序或 <code>ffmpeg</code>，请按下 <code>Ctrl + C</code> 终止运行，不要直接点击终端窗口的关闭按钮</li>
 </ul>
@@ -312,23 +312,10 @@ A: 由于权限限制，您无法直接触发主仓库的 Actions。请通过 Fo
 
 ## 程序更新
 
-<p><strong>方案一：</strong>下载并解压文件，将旧版本的 <code>_internal\Volume</code> 文件夹复制到新版本的 <code>_internal</code> 文件夹。</p>
+<p><strong>方案一：</strong>下载并解压文件，将旧版本的 <code>Volume</code> 文件夹复制到新版本的程序根目录。</p>
 <p><strong>方案二：</strong>下载并解压文件（不要运行程序），复制全部文件，直接覆盖旧版本文件。</p>
 
 # 💝 项目赞助
-
-## DartNode
-
-[![Powered by DartNode](docs/AD/DartNode_AD.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
-
-***
-
-## ZMTO
-
-<p><a href="https://www.zmto.com/"><img src="https://console.zmto.com/templates/2019/dist/images/logo_dark.svg" alt="ZMTO"></a></p>
-<p><a href="https://www.zmto.com/">ZMTO</a>：一家专业的云基础设施提供商，以可靠的尖端技术与专业支持，提供高效的解决方案，并为符合条件的开源项目提供企业级VPS基础设施，支持开源生态系统的可持续发展与创新。</p>
-
-***
 
 ## Swiftproxy
 
@@ -338,27 +325,9 @@ A: 由于权限限制，您无法直接触发主仓库的 Actions。请通过 Fo
 
 ***
 
-## BestProxy
+## DartNode
 
-<p><a href="https://bestproxy.com/?keyword=btuzoy3b"><img src="docs/AD/BestProxy_CN_AD.gif" alt="BestProxy"></a></p>
-<p><a href="https://bestproxy.com/?keyword=btuzoy3b">BestProxy</a> 提供住宅代理与动态 IP，比较适合 TikTok 这种高风控平台的长期自动化场景。</p>
-<ul>
-<li>✅ 高频下载更加稳定</li>
-<li>✅ 请求失败率明显降低</li>
-<li>✅ 多地区内容访问更顺畅</li>
-<li>✅ 更适合长期挂机运行</li>
-<li>✅ 对批量采集和自动化更加友好</li>
-<li>✅ 支持 HTTP / HTTPS / SOCKS5</li>
-</ul>
-<p>折扣：10%，赠送 500M 流量，券码：ZCTYUH90</p>
-
-***
-
-## RapidProxy
-
-<p><a href="https://www.rapidproxy.io/?ref=Jo"><img src="docs/AD/RapidProxy_CN_AD.png" alt="RapidProxy" width="600" height="314"></a></p>
-<p><a href="https://www.rapidproxy.io/?ref=Jo">RapidProxy</a> 提供全球 9000万+ 高质量住宅 IP，专为 TikTok 与短视频平台的数据采集、内容下载及自动化运营场景打造。支持高匿名访问、灵活切换 IP 与长时间稳定连接，帮助提升任务成功率并降低平台风控干扰。</p>
-<p>优惠码：RAPID10（享 9 折优惠）</p>
+[![Powered by DartNode](docs/AD/DartNode_AD.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
 
 ***
 
@@ -443,21 +412,22 @@ A: 由于权限限制，您无法直接触发主仓库的 Actions。请通过 Fo
 <b>在使用本项目的代码和功能之前，请您认真考虑并接受以上免责声明。如果您对上述声明有任何疑问或不同意，请不要使用本项目的代码和功能。如果您使用了本项目的代码和功能，则视为您已完全理解并接受上述免责声明，并自愿承担使用本项目的一切风险和后果。</b>
 <h1>⭐ Star 趋势</h1>
 <p>
-<img alt="Star History Chart" src="https://api.star-history.com/svg?repos=JoeanAmier/TikTokDownloader&amp;type=Timeline"/>
+<img alt="Star History Chart" src="https://api.star-history.com/chart?repos=JoeanAmier/TikTokDownloader&type=timeline&legend=bottom-right&sealed_token=_T_oN4xPDhh9ew5nz-OYOAjczkaYr6UUekQ5dTCrnmtR9kk5mM6h5fdHGJRy4ZaLEb36r8gSCrMfot4pk2E5lYzH-Ixk6eFOmmk1sNViVxsf-lkDYaQsbR9awBGeFyASWSX_RV10hHOWQEivZXRp4n9hcpf02mpReiwPVJHdQPXJryOXo1jDXlTF2UoX" />
 </p>
 
 # 💡 项目参考
 
 * https://github.com/Johnserf-Seed/f2
 * https://github.com/Evil0ctal/Douyin_TikTok_Download_API
-* https://github.com/justbeluga/tiktok-web-reverse-engineering
 * https://github.com/ihmily/DouyinLiveRecorder
-* https://github.com/encode/httpx/
+* https://github.com/xvhuan/tiktok-web-params
+* https://github.com/lexiforest/curl_cffi/
 * https://github.com/Textualize/rich
 * https://github.com/omnilib/aiosqlite
 * https://github.com/Tinche/aiofiles
-* https://github.com/pyinstaller/pyinstaller
+* https://github.com/marcelotduarte/cx_Freeze
 * https://foss.heptapod.net/openpyxl/openpyxl
 * https://github.com/carpedm20/emoji/
 * https://github.com/lxml/lxml
+* https://github.com/extremeheat/JSPyBridge
 * https://ffmpeg.org/ffmpeg-all.html

@@ -10,17 +10,18 @@ license = "GPL-3.0"
 requires-python = ">=3.12"
 dependencies = [
     "aiofiles>=25.1.0",
-    "aiosqlite>=0.21.0",
+    "aiosqlite>=0.22.1",
+    "curl-cffi>=0.16.2",
     "emoji>=2.15.0",
-    "fastapi>=0.136.1",
+    "fastapi>=0.141.1",
     "gmssl>=3.2.2",
-    "httpx[socks]>=0.28.1",
-    "lxml>=6.1.0",
+    "javascript>=1!1.2.6",
+    "lxml>=6.1.2",
     "openpyxl>=3.1.5",
-    "pydantic>=2.13.3",
+    "pydantic>=2.13.4",
     "pyperclip>=1.11.0",
     "rich>=15.0.0",
-    "uvicorn>=0.46.0",
+    "uvicorn>=0.52.4",
 ]
 
 [project.urls]
@@ -110,5 +111,5 @@ docstring-code-line-length = "dynamic"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.3",
+    "pytest>=9.1.1",
 ]

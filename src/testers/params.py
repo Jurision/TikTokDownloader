@@ -6,15 +6,17 @@ from src.custom import (
     DATA_HEADERS,
     DATA_HEADERS_TIKTOK,
     DOWNLOAD_HEADERS_TIKTOK,
-    PROJECT_ROOT,
+    IMPERSONATE,
+    USERAGENT,
+    VOLUME,
 )
-from src.encrypt import ABogus, XBogus, XGnarly
+from src.encrypt import DouYinParams, TikTokParams
 from src.testers.logger import Logger
 from src.tools import Cleaner, create_client
 
 
 class Params:
-    CONFIG = PROJECT_ROOT.joinpath("test_cookie.ini")
+    CONFIG = VOLUME.joinpath("test_cookie.ini")
     CLEANER = Cleaner()
 
     def __init__(self):
@@ -33,9 +35,8 @@ class Params:
         }
         self.headers_download = DOWNLOAD_HEADERS_TIKTOK
         self.logger = Logger()
-        self.ab = ABogus()
-        self.xb = XBogus()
-        self.xg = XGnarly()
+        self.douyin_params = DouYinParams()
+        self.tiktok_params = TikTokParams()
         self.console = Console()
         self.max_retry = 0
         self.timeout = 5
@@ -43,13 +44,19 @@ class Params:
         self.proxy = None
         self.proxy_tiktok = "http://127.0.0.1:10808"
         self.date_format = "%Y-%m-%d %H:%M:%S"
+        self.impersonate = IMPERSONATE
+        self.impersonate_tiktok = IMPERSONATE
+        self.user_agent = USERAGENT
+        self.user_agent_tiktok = USERAGENT
         self.client = create_client(
             timeout=self.timeout,
             proxy=self.proxy,
+            impersonate=self.impersonate,
         )
         self.client_tiktok = create_client(
             timeout=self.timeout,
             proxy=self.proxy_tiktok,
+            impersonate=self.impersonate,
         )
 
     def create_ini(self):
@@ -92,13 +99,17 @@ class Params:
             )
         except (NoSectionError, NoOptionError) as e:
             print(f"读取 Cookie 错误: {e}")
+        if not self.cookie_str:
+            print("警告: 抖音 Cookie 为空！")
+        if not self.cookie_str_tiktok:
+            print("警告: TikTok Cookie 为空！")
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.client.aclose()
-        await self.client_tiktok.aclose()
+        await self.client.close()
+        await self.client_tiktok.close()
 
 
 async def test():
