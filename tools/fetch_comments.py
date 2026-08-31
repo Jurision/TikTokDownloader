@@ -1,14 +1,20 @@
 """
-一条链接 → 抖音评论全量抓取，输出 JSON（供 AI 分析）+ CSV（程序自带）。
+一条链接 → 评论全量抓取，输出 JSON（供 AI 分析）+ CSV（程序自带）。
+抖音与 TikTok 均支持，按链接域名自动分流。
 
 用法:
-    python tools/fetch_comments.py <链接或作品ID> [更多链接...] [--reply] [--pages N]
+    python tools/fetch_comments.py <链接或作品ID> [更多链接...] [选项]
 
-    --reply      同时抓二级回复（有回复的评论逐条拉，会慢很多）
-    --pages N    最多翻 N 页，一页 20 条；不给则抓完为止
+    --reply       同时抓二级回复（有回复的评论逐条拉，会慢很多）
+    --pages N     最多翻 N 页，一页 20 条；不给则抓完为止
+    --tiktok      只给作品 ID 时强制按 TikTok 处理（给链接则自动判断）
+    --delay S     拉回复时每条间隔秒数，默认抖音 1.0 / TikTok 2.5
 
 复用程序自身的 Parameter / Comment / Extractor，不重复实现签名逻辑。
 Cookie 从 Volume/settings.json 读，脚本不接触也不打印它。
+
+注意 TikTok 对高频请求敏感：回复是逐条请求的，无节流会很快被限流，
+表现为「响应内容不是有效的 JSON 数据」。连续 3 条失败会自动停止回复采集。
 """
 
 from __future__ import annotations
@@ -34,7 +40,11 @@ def is_tiktok(url: str) -> bool:
 
 
 async def collect(
-    urls: list[str], reply: bool, pages: int | None, force_tiktok: bool = False
+    urls: list[str],
+    reply: bool,
+    pages: int | None,
+    force_tiktok: bool = False,
+    delay: float | None = None,
 ) -> list[dict]:
     results = []
     async with TikTokDownloader() as app:
@@ -86,11 +96,26 @@ async def collect(
                         c for c in comments
                         if int(c.get("reply_comment_total") or 0) > 0
                     ]
-                    print(f".. 拉 {len(targets)} 条评论的回复", file=sys.stderr)
-                    for c in targets:
+                    # 回复要逐条请求，不节流会被限流（TikTok 尤其敏感）
+                    gap = delay if delay is not None else (2.5 if tiktok else 1.0)
+                    print(f".. 拉 {len(targets)} 条评论的回复"
+                          f"（每条间隔 {gap}s）", file=sys.stderr)
+                    misses = 0
+                    for n, c in enumerate(targets):
+                        if n:
+                            await asyncio.sleep(gap)
                         got = await get_replies(detail_id, c["cid"], **kwargs)
                         if got:
                             replies[c["cid"]] = got
+                            misses = 0
+                        else:
+                            misses += 1
+                            # 连续失败多半是被限流了，继续打只会更糟
+                            if misses >= 3:
+                                print("!! 连续 3 条回复拉取失败，判定为限流，"
+                                      "停止回复采集（已拿到的评论仍会保留）",
+                                      file=sys.stderr)
+                                break
 
                 results.append({
                     "platform": platform,
@@ -112,9 +137,14 @@ def main() -> int:
     ap.add_argument("--pages", type=int, default=None, help="最多翻几页（一页 20 条）")
     ap.add_argument("--tiktok", action="store_true",
                     help="强制按 TikTok 处理（只给作品 ID 时用，链接会自动判断）")
+    ap.add_argument("--delay", type=float, default=None,
+                    help="拉二级回复时每条之间的间隔秒数，"
+                         "默认抖音 1.0、TikTok 2.5")
     args = ap.parse_args()
 
-    results = asyncio.run(collect(args.urls, args.reply, args.pages, args.tiktok))
+    results = asyncio.run(
+        collect(args.urls, args.reply, args.pages, args.tiktok, args.delay)
+    )
     if not results:
         return 1
 

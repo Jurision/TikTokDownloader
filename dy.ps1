@@ -39,7 +39,11 @@ param(
 
     [int]$Pages = 0,
 
-    [switch]$TikTok
+    [switch]$TikTok,
+
+    # 拉二级回复时每条之间的间隔秒数。默认抖音 1.0 / TikTok 2.5。
+    # 被限流（提示「响应内容不是有效的 JSON 数据」）时调大。
+    [double]$Delay = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -55,6 +59,7 @@ $env:PYTHONIOENCODING = 'utf-8'
 $fetchArgs = @((Join-Path $Here 'tools\fetch_comments.py'), $Link)
 if ($Reply)       { $fetchArgs += '--reply' }
 if ($TikTok)      { $fetchArgs += '--tiktok' }
+if ($Delay -gt 0) { $fetchArgs += @('--delay', $Delay) }
 if ($Pages -gt 0) { $fetchArgs += @('--pages', $Pages) }
 
 Write-Host '采集中…' -ForegroundColor Cyan
