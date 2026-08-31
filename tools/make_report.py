@@ -232,7 +232,7 @@ def render(records: list[dict], fmt: str) -> str:
 
     # ---- 给 AI 的纯文本摘要 ----
     lines = [
-        f"抖音作品 {rec['detail_id']} 评论数据",
+        f"{rec.get('platform') or '抖音'}作品 {rec['detail_id']} 评论数据",
         f"采集于 {rec['collected_at']}，共 {len(comments)} 条评论"
         + (f"、{n_reply} 条二级回复" if n_reply else ""),
         f"时间跨度 {times[0] if times else '?'} ~ {times[-1] if times else '?'}",
@@ -254,11 +254,12 @@ def render(records: list[dict], fmt: str) -> str:
     digest = "\n".join(lines)
 
     span = f"{times[0][5:16]} → {times[-1][5:16]}" if times else "—"
+    platform = rec.get("platform") or "抖音"
     title = f"作品 {rec['detail_id']} 评论区"
 
     body = f"""<div class="wrap">
 <header>
-  <p class="eyebrow">抖音评论采集</p>
+  <p class="eyebrow">{esc(platform)} 评论采集</p>
   <h1>作品 {esc(rec['detail_id'])} 的评论区</h1>
   <p class="meta"><span class="mono">采集于 {esc(str(rec['collected_at']).replace('T', ' '))}</span>
   <span>来源 {esc(rec.get('source_url'))}</span></p>

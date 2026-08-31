@@ -13,10 +13,18 @@
 
     Cookie 通过管道传给 Python，不出现在命令行里，也不会被回显。
 
+.PARAMETER TikTok
+    写入 cookie_tiktok（TikTok 平台），不加则写抖音的 cookie。
+
 .EXAMPLE
     # 在 DevTools 里复制好 Cookie 值之后
     .\set-cookie.ps1
+
+.EXAMPLE
+    .\set-cookie.ps1 -TikTok
 #>
+
+param([switch]$TikTok)
 
 $ErrorActionPreference = 'Stop'
 
@@ -36,7 +44,10 @@ if ([string]::IsNullOrWhiteSpace($raw)) {
     exit 2
 }
 
-$raw | & $Python (Join-Path $Here 'tools\set_cookie.py')
+$pyArgs = @((Join-Path $Here 'tools\set_cookie.py'))
+if ($TikTok) { $pyArgs += '--tiktok' }
+
+$raw | & $Python @pyArgs
 $code = $LASTEXITCODE
 
 if ($code -eq 0) {

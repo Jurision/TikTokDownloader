@@ -16,7 +16,7 @@ from ..interface import (
     Account,
     AccountTikTok,
     Collection,
-    # CommentTikTok,
+    CommentTikTok,
     Collects,
     CollectsDetail,
     CollectsMix,
@@ -34,6 +34,7 @@ from ..interface import (
     Mix,
     MixTikTok,
     Reply,
+    ReplyTikTok,
     Search,
     User,
 )
@@ -201,7 +202,10 @@ class TikTok:
                 _("获取直播拉流地址(TikTok)"),
                 self.live_interactive_tiktok,
             ),
-            # (_("采集作品评论数据(TikTok)"), self.comment_interactive_tiktok,),
+            (
+                _("采集作品评论数据(TikTok)"),
+                self.comment_interactive_tiktok,
+            ),
             # (
             #     _("批量下载视频原画(TikTok)"),
             #     self.detail_interactive_tiktok_unofficial,
@@ -1340,7 +1344,17 @@ class TikTok:
         proxy: str = None,
         source: bool = False,
         **kwargs,
-    ) -> list: ...
+    ) -> list:
+        kwargs.pop("reply", None)  # CommentTikTok 不接受该参数
+        if data := await CommentTikTok(
+            self.parameter,
+            cookie,
+            proxy,
+            detail_id=detail_id,
+            **kwargs,
+        ).run():
+            return data if source else await self.save_comment(detail_id, data)
+        return []
 
     async def comment_handle(
         self,
@@ -1415,7 +1429,19 @@ class TikTok:
         cookie: str = None,
         proxy: str = None,
         source=False,
-    ): ...
+    ):
+        if data := await ReplyTikTok(
+            self.parameter,
+            cookie,
+            proxy,
+            detail_id=detail_id,
+            comment_id=comment_id,
+            pages=pages,
+            cursor=cursor,
+            count=count,
+        ).run():
+            return data if source else await self.save_comment(detail_id, data)
+        return []
 
     async def mix_interactive(
         self,

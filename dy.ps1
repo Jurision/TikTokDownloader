@@ -8,7 +8,9 @@
     同时留下一份 JSON，可以直接丢给 AI 分析。
 
 .PARAMETER Link
-    抖音作品链接（网页链接或 App 分享短链均可），也接受纯作品 ID。
+    作品链接，抖音和 TikTok 都认（网页链接或 App 分享短链均可），
+    按域名自动分流。也接受纯作品 ID —— 那种情况下默认按抖音处理，
+    要采 TikTok 请加 -TikTok。
 
 .PARAMETER Reply
     连二级回复一起抓。慢很多，但讨论区的内容都在回复里。
@@ -16,8 +18,14 @@
 .PARAMETER Pages
     最多翻几页，一页 20 条。不给则抓完为止。
 
+.PARAMETER TikTok
+    只给作品 ID 时强制按 TikTok 处理。给完整链接则不需要。
+
 .EXAMPLE
     .\dy.ps1 https://www.douyin.com/video/7679845123581070587
+
+.EXAMPLE
+    .\dy.ps1 https://www.tiktok.com/@user/video/7123456789012345678 -Reply
 
 .EXAMPLE
     .\dy.ps1 7679845123581070587 -Reply -Pages 5
@@ -29,7 +37,9 @@ param(
 
     [switch]$Reply,
 
-    [int]$Pages = 0
+    [int]$Pages = 0,
+
+    [switch]$TikTok
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,7 +53,8 @@ $env:PYTHONIOENCODING = 'utf-8'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 $fetchArgs = @((Join-Path $Here 'tools\fetch_comments.py'), $Link)
-if ($Reply)      { $fetchArgs += '--reply' }
+if ($Reply)       { $fetchArgs += '--reply' }
+if ($TikTok)      { $fetchArgs += '--tiktok' }
 if ($Pages -gt 0) { $fetchArgs += @('--pages', $Pages) }
 
 Write-Host '采集中…' -ForegroundColor Cyan

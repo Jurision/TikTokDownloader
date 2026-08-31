@@ -29,31 +29,53 @@ from src.application.main_terminal import TikTok  # noqa: E402
 OUT_DIR = ROOT / "Volume" / "reports"
 
 
-async def collect(urls: list[str], reply: bool, pages: int | None) -> list[dict]:
+def is_tiktok(url: str) -> bool:
+    return "tiktok.com" in url.lower()
+
+
+async def collect(
+    urls: list[str], reply: bool, pages: int | None, force_tiktok: bool = False
+) -> list[dict]:
     results = []
     async with TikTokDownloader() as app:
         app.check_config()
         await app.check_settings(False)
 
-        if not app.parameter.cookie_state:
-            print("!! Cookie 未设置或已失效，先跑 set-cookie.ps1", file=sys.stderr)
-            return []
-
         tk = TikTok(app.parameter, app.database)
 
         for url in urls:
+            tiktok = force_tiktok or is_tiktok(url)
+            platform = "TikTok" if tiktok else "抖音"
+
+            state = (
+                app.parameter.cookie_tiktok_state if tiktok
+                else app.parameter.cookie_state
+            )
+            if not state:
+                key = "cookie_tiktok" if tiktok else "cookie"
+                print(f"!! {platform} Cookie 未设置或已失效"
+                      f"（settings.json 的 {key}）", file=sys.stderr)
+                continue
+
             if url.strip().isdigit():
                 ids = [url.strip()]          # 直接给的作品 ID
             else:
-                ids = [i for i in await tk.links.run(url) if i]
+                link = tk.links_tiktok if tiktok else tk.links
+                ids = [i for i in await link.run(url) if i]
             if not ids:
                 print(f"!! 无法从 {url} 提取作品 ID", file=sys.stderr)
                 continue
 
+            get_comments = (
+                tk.comment_handle_single_tiktok if tiktok
+                else tk.comment_handle_single
+            )
+            get_replies = tk.reply_handle_tiktok if tiktok else tk.reply_handle
+
             for detail_id in ids:
-                print(f".. 采集 {detail_id}", file=sys.stderr)
+                print(f".. [{platform}] 采集 {detail_id}", file=sys.stderr)
                 kwargs = {"pages": pages} if pages else {}
-                comments = await tk.comment_handle_single(detail_id, **kwargs)
+                comments = await get_comments(detail_id, **kwargs)
                 if not comments:
                     print(f"!! {detail_id} 没采到评论", file=sys.stderr)
                     continue
@@ -66,13 +88,12 @@ async def collect(urls: list[str], reply: bool, pages: int | None) -> list[dict]
                     ]
                     print(f".. 拉 {len(targets)} 条评论的回复", file=sys.stderr)
                     for c in targets:
-                        got = await tk.reply_handle(
-                            detail_id, c["cid"], **kwargs
-                        )
+                        got = await get_replies(detail_id, c["cid"], **kwargs)
                         if got:
                             replies[c["cid"]] = got
 
                 results.append({
+                    "platform": platform,
                     "source_url": url,
                     "detail_id": detail_id,
                     "collected_at": datetime.now().isoformat(timespec="seconds"),
@@ -89,9 +110,11 @@ def main() -> int:
     ap.add_argument("urls", nargs="+", help="抖音作品链接或作品 ID")
     ap.add_argument("--reply", action="store_true", help="同时抓二级回复")
     ap.add_argument("--pages", type=int, default=None, help="最多翻几页（一页 20 条）")
+    ap.add_argument("--tiktok", action="store_true",
+                    help="强制按 TikTok 处理（只给作品 ID 时用，链接会自动判断）")
     args = ap.parse_args()
 
-    results = asyncio.run(collect(args.urls, args.reply, args.pages))
+    results = asyncio.run(collect(args.urls, args.reply, args.pages, args.tiktok))
     if not results:
         return 1
 
@@ -103,7 +126,7 @@ def main() -> int:
     )
 
     for r in results:
-        line = f"OK {r['detail_id']}: {r['comment_count']} 条评论"
+        line = f"OK [{r['platform']}] {r['detail_id']}: {r['comment_count']} 条评论"
         if r["reply_count"]:
             line += f" + {r['reply_count']} 条回复"
         print(line)

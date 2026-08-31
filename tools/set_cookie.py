@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -24,6 +25,7 @@ ENCODE = "UTF-8-SIG"
 SESSION_KEYS = ("sessionid", "sessionid_ss", "sid_tt")
 # 采集还依赖的设备/风控字段，缺了大概率被风控
 DEVICE_KEYS = ("ttwid", "odin_tt", "passport_csrf_token")
+TIKTOK_DEVICE_KEYS = ("ttwid", "msToken", "tt_csrf_token")
 
 
 def extract(raw: str) -> str:
@@ -58,6 +60,13 @@ def looks_like_url(text: str) -> bool:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--tiktok", action="store_true",
+                    help="写入 cookie_tiktok 而不是 cookie")
+    args = ap.parse_args()
+    field = "cookie_tiktok" if args.tiktok else "cookie"
+    platform = "TikTok" if args.tiktok else "抖音"
+
     raw = sys.stdin.read()
     if not raw.strip():
         print("剪贴板是空的。先去 DevTools 复制 Cookie 值再跑。")
@@ -84,15 +93,16 @@ def main() -> int:
         print("说明复制时页面未登录，或只复制到了 Cookie 的一部分。")
         return 4
 
-    missing_device = [k for k in DEVICE_KEYS if k not in names]
+    expect = TIKTOK_DEVICE_KEYS if args.tiktok else DEVICE_KEYS
+    missing_device = [k for k in expect if k not in names]
 
     data = json.loads(SETTINGS.read_text(encoding=ENCODE))
-    data["cookie"] = cookie
+    data[field] = cookie
     SETTINGS.write_text(
         json.dumps(data, ensure_ascii=False, indent=4), encoding=ENCODE
     )
 
-    print(f"已写入 {SETTINGS}")
+    print(f"已写入 {SETTINGS} 的 {field}（{platform}）")
     print(f"  字段数    : {len(names)}")
     print(f"  登录态    : {', '.join(found_session)}")
     print(f"  风控字段  : {'齐全' if not missing_device else '缺 ' + ', '.join(missing_device)}")
