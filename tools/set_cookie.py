@@ -50,8 +50,38 @@ def extract(raw: str) -> str:
     if re.match(r"^\s*cookie\s*:", raw, re.IGNORECASE):
         return raw.split(":", 1)[1].strip()
 
+    # 1. 已经是干净的单行 Cookie 串就原样返回，避免被下面的兜底切短
+    #    （Cookie 值里若含字面空格，正则会在空格处断开）
+    if "\n" not in raw and ";" in raw and "=" in raw:
+        return raw
+
+    # 5. 兜底：从任意文本里捞出最长的一段 `k=v; k=v; ...`
+    #    覆盖「复制为 cURL (cmd)」的 ^" 转义、PowerShell 格式等奇形怪状
+    runs = re.findall(
+        r"(?:[A-Za-z0-9_.-]+=[^;\s]*;\s*){2,}[A-Za-z0-9_.-]+=[^;\s]*", raw
+    )
+    if runs:
+        return max(runs, key=len).strip()
+
     # 1. 当作纯 Cookie 串
     return raw
+
+
+def describe(text: str) -> str:
+    """安全地描述剪贴板内容的形状，不泄露值本身。"""
+    keys = re.findall(r"([A-Za-z0-9_.-]+)=", text)
+    bits = [
+        f"长度 {len(text)}",
+        f"{len(text.splitlines())} 行",
+        f"{text.count('=')} 个 =",
+        f"{text.count(';')} 个 ;",
+    ]
+    if keys:
+        shown = "、".join(keys[:4])
+        bits.append(f"字段名看起来是：{shown}" + ("…" if len(keys) > 4 else ""))
+    else:
+        bits.append("没有任何 key=value 结构")
+    return "  ".join(bits)
 
 
 def looks_like_url(text: str) -> bool:
@@ -81,7 +111,13 @@ def main() -> int:
         return 3
 
     if "=" not in cookie or ";" not in cookie:
-        print(f"内容不像 Cookie（长度 {len(cookie)}，没有 `key=value; ` 结构）。")
+        print("内容不像 Cookie —— 完整的 Cookie 是几十段 `key=value;` 拼起来的长串。")
+        print(f"  实际拿到：{describe(cookie)}")
+        print()
+        print("最可能的原因：在 DevTools 的 Cookie 表格里右键了某一行，")
+        print("那只会复制单个值。要的是整条 Cookie 请求头，两种拿法：")
+        print("  A. 左边『名称』列表里右键那条请求 → 复制 → 复制为 cURL(bash)")
+        print("  B. 右边『标头』→『请求标头』里 Cookie 那一行 → 右键 → 复制值")
         return 3
 
     names = {p.split("=", 1)[0].strip() for p in cookie.split(";") if "=" in p}
