@@ -13,6 +13,9 @@
 复用程序自身的 Parameter / Comment / Extractor，不重复实现签名逻辑。
 Cookie 从 Volume/settings.json 读，脚本不接触也不打印它。
 
+进度打在 stderr 上，原地刷新一行（翻页阶段报页数与累计条数，
+回复阶段报第几条/共几条）。要把进度和结果分开，重定向 stdout 即可。
+
 注意 TikTok 对高频请求敏感：回复是逐条请求的，无节流会很快被限流，
 表现为「响应内容不是有效的 JSON 数据」。连续 3 条失败会自动停止回复采集。
 """
@@ -23,6 +26,7 @@ import argparse
 import asyncio
 import json
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -31,8 +35,66 @@ sys.path.insert(0, str(ROOT))
 
 from src.application import TikTokDownloader  # noqa: E402
 from src.application.main_terminal import TikTok  # noqa: E402
+from src.interface import Comment  # noqa: E402
 
 OUT_DIR = ROOT / "Volume" / "reports"
+
+# 翻页进度是否逐页打印。拉二级回复时关掉，否则几十条回复会刷屏，
+# 那一阶段由 collect() 自己打一行汇总进度。
+SHOW_PAGES = True
+
+
+class PageProgress:
+    """
+    接管上游的 rich 进度条。
+
+    上游 API.run() 的翻页循环每页调一次 progress.update()，但它建的 task
+    是 total=None 的纯 spinner，看不出进度。这里换成能读真实计数的版本：
+    self.response 是逐条累加的，len() 就是当前已获取条数。
+
+    走的是 template.py::progress_object() 里预留的 _progress_factory 钩子，
+    不改上游代码。
+    """
+
+    def __init__(self, api):
+        self.api = api
+        self.label = ""
+        self.pages = 0
+        self.last = 0.0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        if SHOW_PAGES and self.pages:
+            print(f"\r   {self.label} 共 {self.pages} 页 / "
+                  f"{len(self.api.response)} 条{' ' * 20}", file=sys.stderr)
+        return False
+
+    def add_task(self, description="", total=None, **kwargs):
+        self.label = description
+        return 0
+
+    def update(self, task_id=0, **kwargs):
+        self.pages += 1
+        if not SHOW_PAGES:
+            return
+        now = time.monotonic()
+        # 限流到每 0.5s 一次，避免刷屏；首页和每 10 页必打
+        if now - self.last < 0.5 and self.pages % 10:
+            return
+        self.last = now
+        print(f"\r   {self.label} 第 {self.pages} 页 / "
+              f"已取 {len(self.api.response)} 条", end="", file=sys.stderr,
+              flush=True)
+
+
+def _factory(self):
+    return PageProgress(self)
+
+
+# Reply 继承自 Comment，CommentTikTok/ReplyTikTok 也在这条链上，挂一处即可
+Comment._progress_factory = _factory
 
 
 def is_tiktok(url: str) -> bool:
@@ -101,9 +163,14 @@ async def collect(
                     print(f".. 拉 {len(targets)} 条评论的回复"
                           f"（每条间隔 {gap}s）", file=sys.stderr)
                     misses = 0
+                    global SHOW_PAGES
+                    SHOW_PAGES = False
                     for n, c in enumerate(targets):
                         if n:
                             await asyncio.sleep(gap)
+                        print(f"\r   回复 {n + 1}/{len(targets)} / "
+                              f"已取 {sum(len(v) for v in replies.values())} 条",
+                              end="", file=sys.stderr, flush=True)
                         got = await get_replies(detail_id, c["cid"], **kwargs)
                         if got:
                             replies[c["cid"]] = got
@@ -116,6 +183,8 @@ async def collect(
                                       "停止回复采集（已拿到的评论仍会保留）",
                                       file=sys.stderr)
                                 break
+                    SHOW_PAGES = True
+                    print(file=sys.stderr)
 
                 results.append({
                     "platform": platform,
