@@ -9,6 +9,11 @@
     --pages N     最多翻 N 页，一页 20 条；不给则抓完为止
     --tiktok      只给作品 ID 时强制按 TikTok 处理（给链接则自动判断）
     --delay S     拉回复时每条间隔秒数，默认抖音 1.0 / TikTok 2.5
+    --salvage ID  不采集，把上次被硬杀后残留的检查点转成结果 JSON
+
+中断不会丢数据：Ctrl+C 会把在飞请求里已累积的部分抢救出来正常落盘
+（结果标 "partial": true）；被硬杀（超时 kill、断电）则靠每 20 页写一次的
+检查点，事后用 --salvage <作品ID> 取回。
 
 复用程序自身的 Parameter / Comment / Extractor，不重复实现签名逻辑。
 Cookie 从 Volume/settings.json 读，脚本不接触也不打印它。
@@ -43,6 +48,31 @@ OUT_DIR = ROOT / "Volume" / "reports"
 # 那一阶段由 collect() 自己打一行汇总进度。
 SHOW_PAGES = True
 
+# 每翻多少页写一次检查点。硬杀（超时 kill、断电）时靠它保住已采数据。
+CKPT_EVERY = 20
+
+# 当前在飞的请求，供中断时抢救。{"api": API 实例, "detail_id": str}
+_LIVE: dict = {}
+
+
+def ckpt_path(detail_id: str) -> Path:
+    return OUT_DIR / f".ckpt-{detail_id}.json"
+
+
+def write_ckpt(detail_id: str, raw: list[dict]) -> None:
+    """原子写：先写 .tmp 再 replace，避免写一半被杀留下坏文件。"""
+    if not raw:
+        return
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    p = ckpt_path(detail_id)
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps(raw, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(p)
+
+
+def drop_ckpt(detail_id: str) -> None:
+    ckpt_path(detail_id).unlink(missing_ok=True)
+
 
 class PageProgress:
     """
@@ -61,6 +91,8 @@ class PageProgress:
         self.label = ""
         self.pages = 0
         self.last = 0.0
+        # 登记在飞的请求，中断时 collect() 靠它把已采部分抢救出来
+        _LIVE["api"] = api
 
     def __enter__(self):
         return self
@@ -77,6 +109,12 @@ class PageProgress:
 
     def update(self, task_id=0, **kwargs):
         self.pages += 1
+
+        # 定期落检查点，防硬杀
+        did = _LIVE.get("detail_id")
+        if did and SHOW_PAGES and self.pages % CKPT_EVERY == 0:
+            write_ckpt(did, self.api.response)
+
         if not SHOW_PAGES:
             return
         now = time.monotonic()
@@ -147,13 +185,25 @@ async def collect(
             for detail_id in ids:
                 print(f".. [{platform}] 采集 {detail_id}", file=sys.stderr)
                 kwargs = {"pages": pages} if pages else {}
-                comments = await get_comments(detail_id, **kwargs)
+                _LIVE["detail_id"] = detail_id
+                _LIVE.pop("api", None)
+                partial = False
+
+                try:
+                    comments = await get_comments(detail_id, **kwargs)
+                except (KeyboardInterrupt, asyncio.CancelledError):
+                    # Ctrl+C：把在飞请求里已累积的原始数据抢救出来
+                    comments = await salvage(tk, detail_id)
+                    partial = True
+                    print(f"\n!! 已中断，抢救出 {len(comments)} 条评论",
+                          file=sys.stderr)
+
                 if not comments:
                     print(f"!! {detail_id} 没采到评论", file=sys.stderr)
                     continue
 
                 replies: dict[str, list] = {}
-                if reply:
+                if reply and not partial:
                     targets = [
                         c for c in comments
                         if int(c.get("reply_comment_total") or 0) > 0
@@ -165,43 +215,105 @@ async def collect(
                     misses = 0
                     global SHOW_PAGES
                     SHOW_PAGES = False
-                    for n, c in enumerate(targets):
-                        if n:
-                            await asyncio.sleep(gap)
-                        print(f"\r   回复 {n + 1}/{len(targets)} / "
-                              f"已取 {sum(len(v) for v in replies.values())} 条",
-                              end="", file=sys.stderr, flush=True)
-                        got = await get_replies(detail_id, c["cid"], **kwargs)
-                        if got:
-                            replies[c["cid"]] = got
-                            misses = 0
-                        else:
-                            misses += 1
-                            # 连续失败多半是被限流了，继续打只会更糟
-                            if misses >= 3:
-                                print("!! 连续 3 条回复拉取失败，判定为限流，"
-                                      "停止回复采集（已拿到的评论仍会保留）",
-                                      file=sys.stderr)
-                                break
-                    SHOW_PAGES = True
-                    print(file=sys.stderr)
+                    try:
+                        for n, c in enumerate(targets):
+                            if n:
+                                await asyncio.sleep(gap)
+                            print(f"\r   回复 {n + 1}/{len(targets)} / "
+                                  f"已取 {sum(len(v) for v in replies.values())} 条",
+                                  end="", file=sys.stderr, flush=True)
+                            got = await get_replies(detail_id, c["cid"], **kwargs)
+                            if got:
+                                replies[c["cid"]] = got
+                                misses = 0
+                            else:
+                                misses += 1
+                                # 连续失败多半是被限流了，继续打只会更糟
+                                if misses >= 3:
+                                    print("!! 连续 3 条回复拉取失败，判定为限流，"
+                                          "停止回复采集（已拿到的评论仍会保留）",
+                                          file=sys.stderr)
+                                    break
+                    except (KeyboardInterrupt, asyncio.CancelledError):
+                        partial = True
+                        print(f"\n!! 已中断，保留已拉到的 "
+                              f"{sum(len(v) for v in replies.values())} 条回复",
+                              file=sys.stderr)
+                    finally:
+                        SHOW_PAGES = True
+                        print(file=sys.stderr)
 
                 results.append({
                     "platform": platform,
                     "source_url": url,
                     "detail_id": detail_id,
                     "collected_at": datetime.now().isoformat(timespec="seconds"),
+                    "partial": partial,
                     "comment_count": len(comments),
                     "reply_count": sum(len(v) for v in replies.values()),
                     "comments": comments,
                     "replies": replies,
                 })
+                # 数据已进 results，正常落盘即可，检查点不再需要
+                drop_ckpt(detail_id)
+                if partial:
+                    return results      # 用户已要求中断，不再继续后面的作品
     return results
+
+
+async def salvage(tk: TikTok, detail_id: str) -> list[dict]:
+    """把在飞请求里累积的原始数据过一遍提取器，得到和正常路径一样的结构。"""
+    api = _LIVE.get("api")
+    raw = list(api.response) if api is not None else []
+    if not raw:
+        raw = read_ckpt(detail_id)
+    if not raw:
+        return []
+    return await tk.save_comment(detail_id, raw)
+
+
+def read_ckpt(detail_id: str) -> list[dict]:
+    p = ckpt_path(detail_id)
+    if not p.exists():
+        return []
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+async def salvage_only(detail_id: str) -> list[dict]:
+    """--salvage：把硬杀后残留的检查点转成正常的结果 JSON。"""
+    raw = read_ckpt(detail_id)
+    if not raw:
+        print(f"!! 没有 {detail_id} 的检查点", file=sys.stderr)
+        return []
+    async with TikTokDownloader() as app:
+        app.check_config()
+        await app.check_settings(False)
+        tk = TikTok(app.parameter, app.database)
+        comments = await tk.save_comment(detail_id, raw)
+    if not comments:
+        return []
+    drop_ckpt(detail_id)
+    return [{
+        "platform": "抖音",
+        "source_url": f"(从检查点恢复) {detail_id}",
+        "detail_id": detail_id,
+        "collected_at": datetime.now().isoformat(timespec="seconds"),
+        "partial": True,
+        "comment_count": len(comments),
+        "reply_count": 0,
+        "comments": comments,
+        "replies": {},
+    }]
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("urls", nargs="+", help="抖音作品链接或作品 ID")
+    ap.add_argument("urls", nargs="*", help="抖音作品链接或作品 ID")
+    ap.add_argument("--salvage", metavar="作品ID",
+                    help="不采集，把上次被硬杀后残留的检查点转成结果 JSON")
     ap.add_argument("--reply", action="store_true", help="同时抓二级回复")
     ap.add_argument("--pages", type=int, default=None, help="最多翻几页（一页 20 条）")
     ap.add_argument("--tiktok", action="store_true",
@@ -211,9 +323,20 @@ def main() -> int:
                          "默认抖音 1.0、TikTok 2.5")
     args = ap.parse_args()
 
-    results = asyncio.run(
-        collect(args.urls, args.reply, args.pages, args.tiktok, args.delay)
-    )
+    if args.salvage:
+        results = asyncio.run(salvage_only(args.salvage))
+    elif not args.urls:
+        ap.error("要么给链接/作品 ID，要么用 --salvage")
+    else:
+        try:
+            results = asyncio.run(
+                collect(args.urls, args.reply, args.pages,
+                        args.tiktok, args.delay)
+            )
+        except KeyboardInterrupt:
+            # collect 内部已尽量抢救；这里兜住它自己来不及处理的情况
+            print("\n!! 已中断", file=sys.stderr)
+            results = []
     if not results:
         return 1
 
@@ -225,7 +348,9 @@ def main() -> int:
     )
 
     for r in results:
-        line = f"OK [{r['platform']}] {r['detail_id']}: {r['comment_count']} 条评论"
+        tag = "部分" if r.get("partial") else "OK"
+        line = (f"{tag} [{r['platform']}] {r['detail_id']}: "
+                f"{r['comment_count']} 条评论")
         if r["reply_count"]:
             line += f" + {r['reply_count']} 条回复"
         print(line)
