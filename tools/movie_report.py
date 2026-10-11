@@ -354,8 +354,10 @@ def render(films, units, detail_id, partial, fmt):
         f'<span class="gr-n">{n}</span></div>'
         for g, n in gc.most_common())
 
-    live = '<span class="live">采集进行中</span>' if partial else ""
-    note = "（数据仍在增加，这是当前快照）" if partial else ""
+    # partial 只说明「不是全量」，可能是还在跑，也可能是主动停了，
+    # 所以用中性措辞，别写成「采集进行中」
+    live = '<span class="live">部分样本</span>' if partial else ""
+    note = "（评论区未采完，这是其中一段样本）" if partial else ""
     stamp = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     body = f"""<div class="wrap">
