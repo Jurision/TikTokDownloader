@@ -63,13 +63,27 @@ if ($Delay -gt 0) { $fetchArgs += @('--delay', $Delay) }
 if ($Pages -gt 0) { $fetchArgs += @('--pages', $Pages) }
 
 Write-Host '采集中…' -ForegroundColor Cyan
-$out = & $Python @fetchArgs 2>&1 | Tee-Object -Variable stream | Out-String
-if ($LASTEXITCODE -ne 0) {
+
+# 进度打在 stderr、结果打在 stdout，必须分开走：
+# 若用 `2>&1 | ...` 把两条流并进管道，进度会被聚合到最后才出现，
+# 实时刷新就白做了。这里只把 stdout 导进临时文件，stderr 直通控制台。
+$tmp = Join-Path ([IO.Path]::GetTempPath()) "dy-$PID.out"
+try {
+    & $Python @fetchArgs 1>$tmp
+    $code = $LASTEXITCODE
+    $stream = if (Test-Path $tmp) { Get-Content -LiteralPath $tmp } else { @() }
+}
+finally {
+    Remove-Item $tmp -ErrorAction SilentlyContinue
+}
+
+if ($code -ne 0) {
     Write-Host '采集失败。' -ForegroundColor Red
     exit 1
 }
 
-$jsonPath = ($stream | Select-String -Pattern '^JSON:\s*(.+)$').Matches.Groups[1].Value.Trim()
+$m = $stream | Select-String -Pattern '^JSON:\s*(.+)$' | Select-Object -First 1
+$jsonPath = if ($m) { $m.Matches.Groups[1].Value.Trim() } else { $null }
 if (-not $jsonPath -or -not (Test-Path $jsonPath)) {
     Write-Host '没找到采集结果 JSON。' -ForegroundColor Red
     exit 1
